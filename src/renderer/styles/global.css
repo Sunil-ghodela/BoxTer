@@ -269,6 +269,32 @@ body {
   color: var(--accent);
 }
 
+.panel-icon-btn-active {
+  background: var(--accent);
+  color: #000;
+}
+
+.panel-icon-btn-active:hover {
+  background: var(--accent-hover);
+  color: #000;
+}
+
+.panel-pinned {
+  border-color: var(--success);
+}
+
+.panel-pinned.panel-focused {
+  box-shadow: 0 0 0 1px var(--success), 0 4px 20px rgba(80, 250, 123, 0.08);
+  border-color: var(--success);
+}
+
+.panel-pin-badge {
+  display: inline-block;
+  margin-right: 4px;
+  color: var(--success);
+  font-weight: 700;
+}
+
 .panel-close {
   width: 20px;
   height: 20px;

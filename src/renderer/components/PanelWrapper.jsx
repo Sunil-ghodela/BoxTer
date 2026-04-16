@@ -18,11 +18,13 @@ export default function PanelWrapper({
   name,
   isFocused,
   isMaximized,
+  isPinned,
   onFocus,
   onRemove,
   onRename,
   onDuplicate,
   onToggleMaximize,
+  onTogglePin,
   children,
 }) {
   const [editing, setEditing] = useState(false);
@@ -62,7 +64,7 @@ export default function PanelWrapper({
 
   return (
     <div
-      className={`panel panel-${type}${isFocused ? ' panel-focused' : ''}${isMaximized ? ' panel-maximized' : ''}`}
+      className={`panel panel-${type}${isFocused ? ' panel-focused' : ''}${isMaximized ? ' panel-maximized' : ''}${isPinned ? ' panel-pinned' : ''}`}
       onMouseDown={onFocus}
       onFocus={onFocus}
     >
@@ -96,6 +98,7 @@ export default function PanelWrapper({
             onDoubleClick={startEditing}
             title="Double-click to rename"
           >
+            {isPinned && <span className="panel-pin-badge" title="Pinned">*</span>}
             {iconPrefix}{displayName}
           </span>
         )}
@@ -140,19 +143,35 @@ export default function PanelWrapper({
               {isMaximized ? '-' : '^'}
             </button>
           )}
-          <button
-            className="panel-close no-drag"
-            onMouseDown={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              onRemove(id);
-            }}
-            title="Close panel (Ctrl+W)"
-          >
-            x
-          </button>
+          {onTogglePin && (
+            <button
+              className={`panel-icon-btn no-drag${isPinned ? ' panel-icon-btn-active' : ''}`}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                onTogglePin(id);
+              }}
+              title={isPinned ? 'Unpin (Alt+P)' : 'Pin — prevent accidental close (Alt+P)'}
+            >
+              p
+            </button>
+          )}
+          {!isPinned && (
+            <button
+              className="panel-close no-drag"
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                onRemove(id);
+              }}
+              title="Close panel (Ctrl+W)"
+            >
+              x
+            </button>
+          )}
         </div>
       </div>
       <div className="panel-body">{children}</div>

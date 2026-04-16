@@ -9,6 +9,7 @@ const SHORTCUTS = [
     { keys: ['Ctrl', 'Shift', 'T'], desc: 'Undo close (reopen)' },
     { keys: ['Ctrl', 'D'],        desc: 'Duplicate focused panel' },
     { keys: ['Ctrl', 'M'],        desc: 'Maximize / restore focused panel' },
+    { keys: ['Alt', 'P'],         desc: 'Pin / unpin focused panel' },
   ]},
   { group: 'Navigation', items: [
     { keys: ['Ctrl', '1..9'],     desc: 'Focus panel by index' },

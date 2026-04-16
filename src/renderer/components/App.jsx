@@ -60,7 +60,7 @@ export default function App() {
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     autoSaveTimer.current = setTimeout(() => {
       const data = {
-        panels: panels.map((p) => ({ id: p.id, type: p.type, name: p.name })),
+        panels: panels.map((p) => ({ id: p.id, type: p.type, name: p.name, pinned: p.pinned })),
         layouts,
       };
       window.boxterAPI?.session.save(AUTO_SESSION, data).catch(() => {});
@@ -88,9 +88,13 @@ export default function App() {
   }, [layouts]);
 
   const removePanel = useCallback((id) => {
-    // Save to undo stack before removing
+    let wasPinned = false;
     setPanels((prevPanels) => {
       const removed = prevPanels.find((p) => p.id === id);
+      if (removed?.pinned) {
+        wasPinned = true;
+        return prevPanels; // refuse to remove pinned panels
+      }
       setLayouts((prevLayouts) => {
         const removedLayout = (prevLayouts.lg || []).find((l) => l.i === id);
         if (removed) {
@@ -107,13 +111,18 @@ export default function App() {
       return prevPanels.filter((p) => p.id !== id);
     });
 
+    if (wasPinned) return;
+
     if (window.boxterAPI?.terminal) {
       window.boxterAPI.terminal.kill(id);
     }
 
-    // Clear focus + maximize if it was that panel
     setFocusedId((cur) => (cur === id ? null : cur));
     setMaximizedId((cur) => (cur === id ? null : cur));
+  }, []);
+
+  const togglePin = useCallback((id) => {
+    setPanels((prev) => prev.map((p) => (p.id === id ? { ...p, pinned: !p.pinned } : p)));
   }, []);
 
   const undoCloseLastPanel = useCallback(() => {
@@ -194,7 +203,7 @@ export default function App() {
   // Session save/load
   const saveSession = useCallback(async (name) => {
     const sessionData = {
-      panels: panels.map((p) => ({ id: p.id, type: p.type, name: p.name })),
+      panels: panels.map((p) => ({ id: p.id, type: p.type, name: p.name, pinned: p.pinned })),
       layouts,
     };
     await window.boxterAPI?.session.save(name, sessionData);
@@ -224,6 +233,7 @@ export default function App() {
     { key: 'w', ctrl: true, handler: () => { if (focusedId) removePanel(focusedId); } },
     { key: 'd', ctrl: true, handler: () => { if (focusedId) duplicatePanel(focusedId); } },
     { key: 'm', ctrl: true, handler: () => { if (focusedId) toggleMaximize(focusedId); } },
+    { key: 'p', alt: true,  handler: () => { if (focusedId) togglePin(focusedId); } },
     { key: 't', ctrl: true, shift: true, handler: undoCloseLastPanel },
     { key: '?', ctrl: true, shift: true, handler: () => setShowShortcutHelp((s) => !s) },
     { key: '/', ctrl: true, handler: () => setShowShortcutHelp((s) => !s) },
@@ -242,7 +252,7 @@ export default function App() {
     ...[1,2,3,4,5,6,7,8,9].map((n) => ({
       key: String(n), ctrl: true, handler: () => focusByIndex(n - 1),
     })),
-  ], [addPanel, removePanel, duplicatePanel, toggleMaximize, undoCloseLastPanel, focusedId, focusByIndex, maximizedId, showShortcutHelp, showSessionManager]);
+  ], [addPanel, removePanel, duplicatePanel, toggleMaximize, togglePin, undoCloseLastPanel, focusedId, focusByIndex, maximizedId, showShortcutHelp, showSessionManager]);
 
   useKeyboardShortcuts(shortcuts);
 
@@ -319,6 +329,7 @@ export default function App() {
                   id={panel.id}
                   type={panel.type}
                   name={panel.name}
+                  isPinned={!!panel.pinned}
                   isFocused={panel.id === focusedId}
                   isMaximized={panel.id === maximizedId}
                   onFocus={() => setFocusedId(panel.id)}
@@ -326,6 +337,7 @@ export default function App() {
                   onRename={renamePanel}
                   onDuplicate={duplicatePanel}
                   onToggleMaximize={toggleMaximize}
+                  onTogglePin={togglePin}
                 >
                   {renderPanel(panel)}
                 </PanelWrapper>
