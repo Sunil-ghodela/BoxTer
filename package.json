@@ -1,6 +1,6 @@
 {
   "name": "boxter",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A tiling workspace manager — run terminals, browsers, and notes side by side in resizable panels.",
   "main": "src/main/main.js",
   "scripts": {
