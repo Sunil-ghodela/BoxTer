@@ -115,7 +115,32 @@ body {
   font-size: 14px;
 }
 
-/* ===== Grid Container ===== */
+/* ===== Workspace Stack ===== */
+/* All workspaces render at once — inactive ones are hidden with
+   visibility so react-grid-layout can still measure container widths. */
+.workspace-stack {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.workspace {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 6px;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.workspace-active {
+  visibility: visible;
+  pointer-events: auto;
+  z-index: 1;
+}
+
+/* ===== Grid Container (legacy class — kept for backward compat) ===== */
 .grid-container {
   flex: 1;
   overflow-y: auto;
@@ -698,6 +723,133 @@ body {
   border-color: var(--accent);
   color: var(--accent);
   background: var(--bg-secondary);
+}
+
+/* ===== Workspace Tabs ===== */
+.ws-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  user-select: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.ws-tabs-list {
+  display: flex;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ws-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid transparent;
+  border-radius: 6px 6px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  max-width: 200px;
+  min-height: 26px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.ws-tab:hover {
+  background: var(--bg-panel);
+  color: var(--text-primary);
+}
+
+.ws-tab-active {
+  background: var(--bg-panel);
+  color: var(--accent);
+  border-color: var(--border);
+  border-bottom-color: var(--bg-panel);
+  font-weight: 600;
+}
+
+.ws-tab-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+}
+
+.ws-tab-count {
+  padding: 0 6px;
+  background: var(--border);
+  color: var(--text-muted);
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  min-width: 18px;
+  text-align: center;
+}
+
+.ws-tab-active .ws-tab-count {
+  background: var(--accent);
+  color: #000;
+}
+
+.ws-tab-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: monospace;
+  font-size: 12px;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ws-tab-close:hover {
+  background: var(--danger);
+  color: white;
+}
+
+.ws-tab-input {
+  background: var(--bg-input);
+  border: 1px solid var(--accent);
+  color: var(--text-primary);
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-size: 12px;
+  outline: none;
+  width: 140px;
+}
+
+.ws-tab-add {
+  background: none;
+  border: 1px dashed var(--border);
+  color: var(--text-secondary);
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.ws-tab-add:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--bg-panel);
 }
 
 /* ===== Shortcut Help ===== */

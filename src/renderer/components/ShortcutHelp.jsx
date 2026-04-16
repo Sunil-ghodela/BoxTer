@@ -15,6 +15,12 @@ const SHORTCUTS = [
     { keys: ['Ctrl', '1..9'],     desc: 'Focus panel by index' },
     { keys: ['Click'],            desc: 'Focus a panel' },
   ]},
+  { group: 'Workspaces', items: [
+    { keys: ['Ctrl', 'Shift', 'N'], desc: 'New workspace' },
+    { keys: ['Ctrl', 'Tab'],        desc: 'Next workspace' },
+    { keys: ['Ctrl', 'Shift', 'Tab'], desc: 'Previous workspace' },
+    { keys: ['Ctrl', 'Alt', '1..9'], desc: 'Switch to nth workspace' },
+  ]},
   { group: 'Editing', items: [
     { keys: ['F2'],               desc: 'Rename focused panel' },
     { keys: ['Double-click'],     desc: 'On title: rename / On header: maximize' },
