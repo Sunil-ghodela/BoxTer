@@ -25,6 +25,42 @@ A tiling workspace manager for your desktop. Run terminals, browsers, and notes 
 - **Dark Theme** — Easy on the eyes, built for long sessions
 - **Cross Platform** — Linux, macOS, Windows
 
+## Install
+
+Prebuilt installers for every tagged release are published on the [Releases page](https://github.com/Sunil-ghodela/BoxTer/releases).
+
+### macOS — Homebrew
+
+```bash
+brew tap sunil-ghodela/boxter
+brew install --cask boxter
+```
+
+### macOS — direct download
+
+Grab the `.dmg` from the latest release and drag **BoxTer.app** to `/Applications`. Separate DMGs are published for Apple Silicon (`-arm64.dmg`) and Intel.
+
+> The app isn't code-signed yet. On first launch macOS will refuse to open it — right-click the app and choose **Open**, then confirm once.
+
+### Linux
+
+**AppImage (portable, any distro):**
+
+```bash
+chmod +x BoxTer-*.AppImage
+./BoxTer-*.AppImage
+```
+
+**Debian / Ubuntu (`.deb`):**
+
+```bash
+sudo apt install ./BoxTer_*_amd64.deb
+```
+
+### Windows
+
+Download `BoxTer Setup *.exe` from Releases and run it. SmartScreen may flag the unsigned installer — click **More info → Run anyway**.
+
 ## Quick Start
 
 ### Prerequisites
