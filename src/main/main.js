@@ -3,12 +3,27 @@ const path = require('path');
 const os = require('os');
 const pty = require('@lydell/node-pty');
 const Store = require('electron-store');
+const { autoUpdater } = require('electron-updater');
 
 const store = new Store({ name: 'boxter-sessions' });
 const terminals = new Map();
 let mainWindow;
 
 const isDev = !app.isPackaged;
+
+// Auto-update events — forward to renderer for the in-app banner.
+autoUpdater.on('update-available', (info) => {
+  mainWindow?.webContents.send('update:available', { version: info.version });
+});
+autoUpdater.on('update-downloaded', (info) => {
+  mainWindow?.webContents.send('update:downloaded', { version: info.version });
+});
+autoUpdater.on('error', (err) => {
+  mainWindow?.webContents.send('update:error', err?.message || String(err));
+});
+
+ipcMain.on('update:install', () => autoUpdater.quitAndInstall());
+ipcMain.on('update:check', () => { autoUpdater.checkForUpdates().catch(() => {}); });
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -115,7 +130,12 @@ ipcMain.on('open:external', (event, url) => {
   shell.openExternal(url);
 });
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  createWindow();
+  if (!isDev) {
+    autoUpdater.checkForUpdates().catch(() => {});
+  }
+});
 
 app.on('window-all-closed', () => {
   // Kill all terminals

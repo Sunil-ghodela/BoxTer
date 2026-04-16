@@ -1,0 +1,71 @@
+# Flatpak manifest for BoxTer.
+#
+# Flathub publishes Electron apps but requires manual submission + review.
+# This file is a starting template; the submission flow looks like:
+#
+#   1. Fork github.com/flathub/flathub → create a NEW branch named after
+#      the app-id: `new-pr/com.boxter.App`
+#   2. Add this file + an appdata XML + a desktop file inside a directory
+#      matching the app-id. Commit. Push.
+#   3. Open a PR titled "Add com.boxter.App".
+#   4. A flathub reviewer responds within ~1 week. Iterate on feedback.
+#   5. Once merged, Flathub creates a dedicated repo
+#      github.com/flathub/com.boxter.App that you own. Pushing a tagged
+#      commit there rebuilds the flatpak automatically.
+#
+# Update cadence: after each BoxTer release, bump `url` + `sha256` in the
+# `boxter` module below, commit to the flathub/com.boxter.App repo, and
+# push. Flathub's CI rebuilds from the new source.
+#
+# Local test build:
+#   flatpak install flathub org.freedesktop.Sdk//23.08 org.freedesktop.Platform//23.08 org.electronjs.Electron2.BaseApp//23.08
+#   flatpak-builder --user --install --force-clean build-dir com.boxter.App.yml
+#   flatpak run com.boxter.App
+
+app-id: com.boxter.App
+runtime: org.freedesktop.Platform
+runtime-version: '23.08'
+sdk: org.freedesktop.Sdk
+base: org.electronjs.Electron2.BaseApp
+base-version: '23.08'
+command: boxter
+separate-locales: false
+
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --socket=pulseaudio
+  - --device=dri
+  - --filesystem=home
+  - --talk-name=org.freedesktop.Notifications
+
+modules:
+  - name: boxter
+    buildsystem: simple
+    sources:
+      - type: archive
+        # Extracted contents of the AppImage — flatpak-builder can unpack
+        # AppImages if the `type: extra-data` approach isn't preferred.
+        # For a robust flathub build, consider pointing at a .tar.gz of the
+        # linux-unpacked/ directory produced by electron-builder, uploaded
+        # as an extra release asset.
+        url: https://github.com/Sunil-ghodela/BoxTer/releases/download/v1.0.0/BoxTer-1.0.0.AppImage
+        sha256: REPLACE_WITH_APPIMAGE_SHA256
+        dest-filename: BoxTer.AppImage
+        only-arches: [x86_64]
+    build-commands:
+      - chmod +x BoxTer.AppImage
+      - ./BoxTer.AppImage --appimage-extract
+      - mkdir -p /app/bin /app/share/boxter /app/share/applications /app/share/icons/hicolor/512x512/apps /app/share/metainfo
+      - cp -r squashfs-root/* /app/share/boxter/
+      - ln -sf /app/share/boxter/boxter /app/bin/boxter
+      - install -Dm644 squashfs-root/boxter.desktop /app/share/applications/com.boxter.App.desktop
+      - sed -i 's/^Icon=.*/Icon=com.boxter.App/' /app/share/applications/com.boxter.App.desktop
+      - install -Dm644 squashfs-root/boxter.png /app/share/icons/hicolor/512x512/apps/com.boxter.App.png
+      - install -Dm644 com.boxter.App.metainfo.xml /app/share/metainfo/com.boxter.App.metainfo.xml
+    sources-companion:
+      # Drop a com.boxter.App.metainfo.xml (AppStream appdata) alongside this
+      # manifest before submission; Flathub requires it. Template:
+      # https://docs.flathub.org/docs/for-app-authors/metainfo-guidelines/

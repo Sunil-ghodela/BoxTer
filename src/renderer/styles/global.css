@@ -1087,3 +1087,56 @@ kbd {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
 }
+
+/* Auto-update banner */
+.update-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+  background: #1a2730;
+  color: var(--text);
+}
+
+.update-banner-downloaded {
+  background: #143c2a;
+  border-bottom-color: #2a6a4a;
+}
+
+.update-banner-error {
+  background: #3a1a1a;
+  border-bottom-color: #6a2a2a;
+  color: #f0c0c0;
+}
+
+.update-banner span {
+  flex: 1;
+}
+
+.update-banner button {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.update-banner .update-action {
+  background: #50dcf0;
+  border-color: #50dcf0;
+  color: #0a1014;
+  font-weight: 600;
+}
+
+.update-banner .update-action:hover {
+  background: #7be6f5;
+  border-color: #7be6f5;
+}
+
+.update-banner .update-dismiss:hover {
+  background: rgba(255, 255, 255, 0.06);
+}

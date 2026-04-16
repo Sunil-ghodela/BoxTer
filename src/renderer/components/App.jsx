@@ -9,6 +9,7 @@ import NotesPanel from './NotesPanel.jsx';
 import SessionManager from './SessionManager.jsx';
 import ShortcutHelp from './ShortcutHelp.jsx';
 import CommandPalette from './CommandPalette.jsx';
+import UpdateBanner from './UpdateBanner.jsx';
 import useKeyboardShortcuts from '../hooks/useKeyboardShortcuts.js';
 import 'react-grid-layout/css/styles.css';
 
@@ -512,6 +513,7 @@ export default function App() {
 
   return (
     <div className="app">
+      <UpdateBanner />
       <Toolbar
         onAddPanel={addPanel}
         onToggleSessions={() => setShowSessionManager((s) => !s)}

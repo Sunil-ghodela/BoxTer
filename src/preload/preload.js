@@ -24,4 +24,25 @@ contextBridge.exposeInMainWorld('boxterAPI', {
 
   // External
   openExternal: (url) => ipcRenderer.send('open:external', url),
+
+  // Auto-updater
+  updater: {
+    onAvailable: (cb) => {
+      const listener = (_, info) => cb(info);
+      ipcRenderer.on('update:available', listener);
+      return () => ipcRenderer.removeListener('update:available', listener);
+    },
+    onDownloaded: (cb) => {
+      const listener = (_, info) => cb(info);
+      ipcRenderer.on('update:downloaded', listener);
+      return () => ipcRenderer.removeListener('update:downloaded', listener);
+    },
+    onError: (cb) => {
+      const listener = (_, msg) => cb(msg);
+      ipcRenderer.on('update:error', listener);
+      return () => ipcRenderer.removeListener('update:error', listener);
+    },
+    installAndRestart: () => ipcRenderer.send('update:install'),
+    checkNow: () => ipcRenderer.send('update:check'),
+  },
 });

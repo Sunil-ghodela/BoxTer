@@ -60,4 +60,12 @@ jobs:
         if: matrix.os == 'windows-latest'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Optional — when these two secrets are set, electron-builder will
+          # sign the Windows installer with your code-signing cert (removes the
+          # SmartScreen "unknown publisher" warning). Leave unset to ship
+          # unsigned.
+          #   WIN_CSC_LINK: base64-encoded .pfx  OR  an https URL to the .pfx
+          #   WIN_CSC_KEY_PASSWORD: password for the .pfx
+          CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
         run: npx electron-builder --win --publish always

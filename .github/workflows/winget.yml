@@ -1,0 +1,34 @@
+# Submits each published release to the Windows Package Manager
+# (microsoft/winget-pkgs). After the first PR is manually reviewed and
+# merged by winget-pkgs maintainers, subsequent versions typically
+# auto-merge as long as the publisher identity and metadata stay
+# consistent.
+#
+# One-time setup:
+#   1. Fork github.com/microsoft/winget-pkgs under Sunil-ghodela (keep a fork
+#      — the action opens PRs from this fork).
+#   2. Generate a classic PAT: https://github.com/settings/tokens/new
+#      Required scope: public_repo
+#   3. Add it as secret WINGET_TOKEN in this repo's settings.
+#
+# Users then install with:
+#   winget install Sunil-ghodela.BoxTer
+
+name: Submit to winget
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+      - name: Submit manifest to winget-pkgs
+        uses: vedantmgoyal2009/winget-releaser@v2
+        with:
+          identifier: Sunil-ghodela.BoxTer
+          installers-regex: 'BoxTer-Setup-.*\.exe$'
+          token: ${{ secrets.WINGET_TOKEN }}
+          fork-user: Sunil-ghodela
