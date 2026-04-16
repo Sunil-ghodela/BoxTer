@@ -4,8 +4,9 @@
   "description": "A tiling workspace manager — run terminals, browsers, and notes side by side in resizable panels.",
   "main": "src/main/main.js",
   "scripts": {
-    "start": "electron .",
-    "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "start": "electron . --no-sandbox",
+    "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron . --no-sandbox\"",
+    "dev:sandbox": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "build:renderer": "vite build",
     "build": "npm run build:renderer && electron-builder",
     "pack": "npm run build:renderer && electron-builder --dir"

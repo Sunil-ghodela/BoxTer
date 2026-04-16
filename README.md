@@ -46,6 +46,18 @@ npm install
 npm run dev
 ```
 
+### Linux Sandbox Note
+
+On Linux you may see a `chrome-sandbox` permission error when running with the default sandbox. The `npm run dev` and `npm start` scripts include `--no-sandbox` for this reason. If you prefer full sandboxing:
+
+```bash
+sudo chown root:root node_modules/electron/dist/chrome-sandbox
+sudo chmod 4755 node_modules/electron/dist/chrome-sandbox
+npm run dev:sandbox
+```
+
+This only matters in development — production builds (AppImage/deb) package the sandbox correctly.
+
 ### Build for Distribution
 
 ```bash
