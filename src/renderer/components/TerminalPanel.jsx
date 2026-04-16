@@ -41,6 +41,46 @@ export default function TerminalPanel({ id }) {
     termRef.current = term;
     fitRef.current = fitAddon;
 
+    // Ctrl/Cmd+Shift+C → copy, Ctrl/Cmd+Shift+V → paste. Also Ctrl+Insert/Shift+Insert.
+    // (Plain Ctrl+C stays as SIGINT so shells still work.)
+    term.attachCustomKeyEventHandler((e) => {
+      if (e.type !== 'keydown') return true;
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && e.shiftKey && (e.key === 'C' || e.key === 'c')) {
+        const sel = term.getSelection();
+        if (sel) { navigator.clipboard.writeText(sel).catch(() => {}); return false; }
+      }
+      if (mod && e.shiftKey && (e.key === 'V' || e.key === 'v')) {
+        navigator.clipboard.readText().then((txt) => {
+          if (txt) window.boxterAPI?.terminal.write(id, txt);
+        }).catch(() => {});
+        return false;
+      }
+      if (e.shiftKey && e.key === 'Insert') {
+        navigator.clipboard.readText().then((txt) => {
+          if (txt) window.boxterAPI?.terminal.write(id, txt);
+        }).catch(() => {});
+        return false;
+      }
+      return true;
+    });
+
+    // Right-click: copy if there's a selection, otherwise paste.
+    const onContextMenu = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const sel = term.getSelection();
+      if (sel) {
+        navigator.clipboard.writeText(sel).then(() => term.clearSelection()).catch(() => {});
+      } else {
+        navigator.clipboard.readText().then((txt) => {
+          if (txt) window.boxterAPI?.terminal.write(id, txt);
+        }).catch(() => {});
+      }
+    };
+    const containerEl = containerRef.current;
+    containerEl.addEventListener('contextmenu', onContextMenu);
+
     // Fit after a short delay to let the container settle
     setTimeout(() => {
       try {
@@ -80,6 +120,7 @@ export default function TerminalPanel({ id }) {
 
     return () => {
       resizeObserver.disconnect();
+      containerEl.removeEventListener('contextmenu', onContextMenu);
       if (cleanupRef.current) cleanupRef.current();
       term.dispose();
       termRef.current = null;

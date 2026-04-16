@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 contextBridge.exposeInMainWorld('boxterAPI', {
   // Terminal
@@ -20,6 +20,24 @@ contextBridge.exposeInMainWorld('boxterAPI', {
     load: (name) => ipcRenderer.invoke('session:load', { name }),
     list: () => ipcRenderer.invoke('session:list'),
     delete: (name) => ipcRenderer.invoke('session:delete', { name }),
+  },
+
+  // Files (file-drop panel)
+  files: {
+    list: (panelId) => ipcRenderer.invoke('files:list', { panelId }),
+    save: (panelId, name, data) => ipcRenderer.invoke('files:save', { panelId, name, data }),
+    importPaths: (panelId, paths) => ipcRenderer.invoke('files:importPaths', { panelId, paths }),
+    delete: (panelId, name) => ipcRenderer.invoke('files:delete', { panelId, name }),
+    rename: (panelId, oldName, newName) => ipcRenderer.invoke('files:rename', { panelId, oldName, newName }),
+    readDataUrl: (panelId, name, mime) => ipcRenderer.invoke('files:readDataUrl', { panelId, name, mime }),
+    open: (panelId, name) => ipcRenderer.send('files:open', { panelId, name }),
+    reveal: (panelId, name) => ipcRenderer.send('files:reveal', { panelId, name }),
+    purgePanel: (panelId) => ipcRenderer.invoke('files:purgePanel', { panelId }),
+    // Resolve a File object dropped from the OS to its on-disk path.
+    // Returns '' for files that came from memory (e.g. pasted from clipboard).
+    pathForFile: (file) => {
+      try { return webUtils.getPathForFile(file) || ''; } catch { return ''; }
+    },
   },
 
   // External

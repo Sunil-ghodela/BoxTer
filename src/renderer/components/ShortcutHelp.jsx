@@ -5,6 +5,7 @@ const SHORTCUTS = [
     { keys: ['Ctrl', 'T'],        desc: 'New Terminal' },
     { keys: ['Ctrl', 'B'],        desc: 'New Browser' },
     { keys: ['Ctrl', 'E'],        desc: 'New Notes' },
+    { keys: ['Ctrl', 'Shift', 'F'], desc: 'New Files (drop-zone)' },
     { keys: ['Ctrl', 'W'],        desc: 'Close focused panel' },
     { keys: ['Ctrl', 'Shift', 'T'], desc: 'Undo close (reopen)' },
     { keys: ['Ctrl', 'D'],        desc: 'Duplicate focused panel' },

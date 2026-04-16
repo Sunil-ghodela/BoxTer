@@ -4,6 +4,7 @@ const PANEL_TYPES = [
   { type: 'terminal', label: 'Terminal', icon: '>' },
   { type: 'browser',  label: 'Browser',  icon: '@' },
   { type: 'notes',    label: 'Notes',    icon: '#' },
+  { type: 'files',    label: 'Files',    icon: '+' },
 ];
 
 export default function Toolbar({ onAddPanel, onToggleSessions, onShowShortcuts }) {

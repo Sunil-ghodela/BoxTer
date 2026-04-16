@@ -6,6 +6,7 @@ import PanelWrapper from './PanelWrapper.jsx';
 import TerminalPanel from './TerminalPanel.jsx';
 import BrowserPanel from './BrowserPanel.jsx';
 import NotesPanel from './NotesPanel.jsx';
+import FilesPanel from './FilesPanel.jsx';
 import SessionManager from './SessionManager.jsx';
 import ShortcutHelp from './ShortcutHelp.jsx';
 import CommandPalette from './CommandPalette.jsx';
@@ -24,6 +25,7 @@ const PANEL_DEFAULTS = {
   terminal: { w: 4, h: 4, minW: 2, minH: 2 },
   browser:  { w: 5, h: 5, minW: 3, minH: 3 },
   notes:    { w: 3, h: 3, minW: 2, minH: 2 },
+  files:    { w: 4, h: 4, minW: 2, minH: 2 },
 };
 
 // Storage keys
@@ -281,10 +283,11 @@ export default function App() {
     setWorkspaces((prev) => {
       if (prev.length <= 1) return prev; // keep at least one
       const ws = prev.find((w) => w.id === wsId);
-      // Kill all terminals in that workspace
-      if (ws && window.boxterAPI?.terminal) {
+      // Kill all terminals and purge file-panel storage in that workspace
+      if (ws) {
         ws.panels.forEach((p) => {
-          if (p.type === 'terminal') window.boxterAPI.terminal.kill(p.id);
+          if (p.type === 'terminal') window.boxterAPI?.terminal?.kill(p.id);
+          if (p.type === 'files') window.boxterAPI?.files?.purgePanel?.(p.id);
         });
       }
       delete closedStacks.current[wsId];
@@ -370,6 +373,7 @@ export default function App() {
     { key: 't', ctrl: true, handler: () => addPanel('terminal') },
     { key: 'b', ctrl: true, handler: () => addPanel('browser') },
     { key: 'e', ctrl: true, handler: () => addPanel('notes') },
+    { key: 'f', ctrl: true, shift: true, handler: () => addPanel('files') },
     { key: 'w', ctrl: true, handler: () => { if (focusedId) removePanel(focusedId); } },
     { key: 'd', ctrl: true, handler: () => { if (focusedId) duplicatePanel(focusedId); } },
     { key: 'm', ctrl: true, handler: () => { if (focusedId) toggleMaximize(focusedId); } },
@@ -421,6 +425,8 @@ export default function App() {
         keys: ['Ctrl', 'B'], handler: () => addPanel('browser') },
       { id: 'new-notes',    category: 'Panel', label: 'New Notes',
         keys: ['Ctrl', 'E'], handler: () => addPanel('notes') },
+      { id: 'new-files',    category: 'Panel', label: 'New Files',
+        keys: ['Ctrl', 'Shift', 'F'], handler: () => addPanel('files') },
     ];
     if (focusedPanel) {
       list.push(
@@ -507,6 +513,7 @@ export default function App() {
       case 'terminal': return <TerminalPanel id={panel.id} />;
       case 'browser':  return <BrowserPanel id={panel.id} />;
       case 'notes':    return <NotesPanel id={panel.id} />;
+      case 'files':    return <FilesPanel id={panel.id} />;
       default: return <div>Unknown panel type</div>;
     }
   };
@@ -563,6 +570,7 @@ export default function App() {
                   <button onClick={() => addPanel('terminal')}>Open Terminal</button>
                   <button onClick={() => addPanel('browser')}>Open Browser</button>
                   <button onClick={() => addPanel('notes')}>Open Notes</button>
+                  <button onClick={() => addPanel('files')}>Open Files</button>
                 </div>
                 <p className="empty-tip">
                   Tip: press <kbd>Ctrl</kbd>+<kbd>/</kbd> to see all shortcuts

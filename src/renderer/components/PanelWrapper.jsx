@@ -4,12 +4,14 @@ const TYPE_LABELS = {
   terminal: '> Terminal',
   browser: '@ Browser',
   notes: '# Notes',
+  files: '+ Files',
 };
 
 const TYPE_ICONS = {
   terminal: '>',
   browser: '@',
   notes: '#',
+  files: '+',
 };
 
 export default function PanelWrapper({
