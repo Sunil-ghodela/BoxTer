@@ -6,6 +6,8 @@ import TerminalPanel from './TerminalPanel.jsx';
 import BrowserPanel from './BrowserPanel.jsx';
 import NotesPanel from './NotesPanel.jsx';
 import SessionManager from './SessionManager.jsx';
+import ShortcutHelp from './ShortcutHelp.jsx';
+import useKeyboardShortcuts from '../hooks/useKeyboardShortcuts.js';
 import 'react-grid-layout/css/styles.css';
 
 const ResponsiveGrid = WidthProvider(Responsive);
@@ -20,13 +22,17 @@ const PANEL_DEFAULTS = {
 };
 
 const AUTO_SESSION = '__last_session__';
+const MAX_UNDO = 10;
 
 export default function App() {
   const [panels, setPanels] = useState([]);
   const [layouts, setLayouts] = useState({ lg: [] });
   const [showSessionManager, setShowSessionManager] = useState(false);
+  const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+  const [focusedId, setFocusedId] = useState(null);
   const [isRestored, setIsRestored] = useState(false);
   const autoSaveTimer = useRef(null);
+  const closedStackRef = useRef([]); // stack of { panel, layout } for undo
 
   // Restore last session on first mount
   useEffect(() => {
@@ -49,7 +55,7 @@ export default function App() {
 
   // Auto-save last session whenever panels or layouts change (debounced)
   useEffect(() => {
-    if (!isRestored) return; // don't auto-save before restore finishes
+    if (!isRestored) return;
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     autoSaveTimer.current = setTimeout(() => {
       const data = {
@@ -77,18 +83,55 @@ export default function App() {
         { i: id, x: 0, y: maxY, ...defaults },
       ],
     }));
+    setFocusedId(id);
   }, [layouts]);
 
   const removePanel = useCallback((id) => {
+    // Save to undo stack before removing
+    setPanels((prevPanels) => {
+      const removed = prevPanels.find((p) => p.id === id);
+      setLayouts((prevLayouts) => {
+        const removedLayout = (prevLayouts.lg || []).find((l) => l.i === id);
+        if (removed) {
+          closedStackRef.current.push({ panel: removed, layout: removedLayout });
+          if (closedStackRef.current.length > MAX_UNDO) {
+            closedStackRef.current.shift();
+          }
+        }
+        return {
+          ...prevLayouts,
+          lg: (prevLayouts.lg || []).filter((l) => l.i !== id),
+        };
+      });
+      return prevPanels.filter((p) => p.id !== id);
+    });
+
     if (window.boxterAPI?.terminal) {
       window.boxterAPI.terminal.kill(id);
     }
-    setPanels((prev) => prev.filter((p) => p.id !== id));
-    setLayouts((prev) => ({
-      ...prev,
-      lg: (prev.lg || []).filter((l) => l.i !== id),
-    }));
+
+    // Clear focus if it was the focused panel
+    setFocusedId((cur) => (cur === id ? null : cur));
   }, []);
+
+  const undoCloseLastPanel = useCallback(() => {
+    const last = closedStackRef.current.pop();
+    if (!last) return;
+    const { panel, layout } = last;
+    setPanels((prev) => [...prev, panel]);
+    if (layout) {
+      setLayouts((prev) => ({
+        ...prev,
+        lg: [...(prev.lg || []), layout],
+      }));
+    }
+    setFocusedId(panel.id);
+  }, []);
+
+  const focusByIndex = useCallback((idx) => {
+    const panel = panels[idx];
+    if (panel) setFocusedId(panel.id);
+  }, [panels]);
 
   const onLayoutChange = useCallback((layout, allLayouts) => {
     setLayouts(allLayouts);
@@ -106,19 +149,36 @@ export default function App() {
   const loadSession = useCallback(async (name) => {
     const data = await window.boxterAPI?.session.load(name);
     if (!data) return;
-    // Kill existing terminals
     panels.forEach((p) => {
       if (p.type === 'terminal') window.boxterAPI?.terminal.kill(p.id);
     });
     setPanels(data.panels || []);
     setLayouts(data.layouts || { lg: [] });
-    // Update counter to avoid id collisions
     const maxNum = (data.panels || []).reduce((max, p) => {
       const num = parseInt(p.id.replace('panel-', ''), 10);
       return isNaN(num) ? max : Math.max(max, num);
     }, panelCounter);
     panelCounter = maxNum;
+    setFocusedId((data.panels && data.panels[0] && data.panels[0].id) || null);
   }, [panels]);
+
+  // Keyboard shortcuts
+  const shortcuts = React.useMemo(() => [
+    { key: 't', ctrl: true, handler: () => addPanel('terminal') },
+    { key: 'b', ctrl: true, handler: () => addPanel('browser') },
+    { key: 'e', ctrl: true, handler: () => addPanel('notes') },
+    { key: 'w', ctrl: true, handler: () => { if (focusedId) removePanel(focusedId); } },
+    { key: 't', ctrl: true, shift: true, handler: undoCloseLastPanel },
+    { key: '?', ctrl: true, shift: true, handler: () => setShowShortcutHelp((s) => !s) },
+    { key: '/', ctrl: true, handler: () => setShowShortcutHelp((s) => !s) },
+    { key: 's', ctrl: true, handler: () => setShowSessionManager(true) },
+    { key: 'Escape', ignoreInInputs: false, handler: () => { setShowShortcutHelp(false); setShowSessionManager(false); } },
+    ...[1,2,3,4,5,6,7,8,9].map((n) => ({
+      key: String(n), ctrl: true, handler: () => focusByIndex(n - 1),
+    })),
+  ], [addPanel, removePanel, undoCloseLastPanel, focusedId, focusByIndex]);
+
+  useKeyboardShortcuts(shortcuts);
 
   const renderPanel = (panel) => {
     switch (panel.type) {
@@ -138,6 +198,7 @@ export default function App() {
       <Toolbar
         onAddPanel={addPanel}
         onToggleSessions={() => setShowSessionManager((s) => !s)}
+        onShowShortcuts={() => setShowShortcutHelp(true)}
       />
 
       {showSessionManager && (
@@ -146,6 +207,10 @@ export default function App() {
           onLoad={loadSession}
           onClose={() => setShowSessionManager(false)}
         />
+      )}
+
+      {showShortcutHelp && (
+        <ShortcutHelp onClose={() => setShowShortcutHelp(false)} />
       )}
 
       <div className="grid-container">
@@ -159,6 +224,9 @@ export default function App() {
               <button onClick={() => addPanel('browser')}>Open Browser</button>
               <button onClick={() => addPanel('notes')}>Open Notes</button>
             </div>
+            <p className="empty-tip">
+              Tip: press <kbd>Ctrl</kbd>+<kbd>/</kbd> to see all shortcuts
+            </p>
           </div>
         ) : (
           <ResponsiveGrid
@@ -179,6 +247,8 @@ export default function App() {
                 <PanelWrapper
                   id={panel.id}
                   type={panel.type}
+                  isFocused={panel.id === focusedId}
+                  onFocus={() => setFocusedId(panel.id)}
                   onRemove={removePanel}
                 >
                   {renderPanel(panel)}

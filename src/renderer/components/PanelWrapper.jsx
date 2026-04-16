@@ -6,9 +6,13 @@ const TYPE_LABELS = {
   notes: '# Notes',
 };
 
-export default function PanelWrapper({ id, type, onRemove, children }) {
+export default function PanelWrapper({ id, type, isFocused, onFocus, onRemove, children }) {
   return (
-    <div className={`panel panel-${type}`}>
+    <div
+      className={`panel panel-${type}${isFocused ? ' panel-focused' : ''}`}
+      onMouseDown={onFocus}
+      onFocus={onFocus}
+    >
       <div className="panel-header">
         <span className="panel-type">{TYPE_LABELS[type] || type}</span>
         <button
@@ -20,7 +24,7 @@ export default function PanelWrapper({ id, type, onRemove, children }) {
             e.preventDefault();
             onRemove(id);
           }}
-          title="Close panel"
+          title="Close panel (Ctrl+W)"
         >
           x
         </button>

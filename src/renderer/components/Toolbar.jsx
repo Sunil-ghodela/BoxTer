@@ -6,7 +6,7 @@ const PANEL_TYPES = [
   { type: 'notes',    label: 'Notes',    icon: '#' },
 ];
 
-export default function Toolbar({ onAddPanel, onToggleSessions }) {
+export default function Toolbar({ onAddPanel, onToggleSessions, onShowShortcuts }) {
   return (
     <div className="toolbar">
       <div className="toolbar-brand">
@@ -29,6 +29,13 @@ export default function Toolbar({ onAddPanel, onToggleSessions }) {
       </div>
 
       <div className="toolbar-right">
+        <button
+          className="toolbar-btn help-btn"
+          onClick={onShowShortcuts}
+          title="Keyboard shortcuts (Ctrl+/)"
+        >
+          ?
+        </button>
         <button className="toolbar-btn session-btn" onClick={onToggleSessions}>
           Sessions
         </button>

@@ -161,6 +161,16 @@ body {
   border: 1px solid var(--border);
   overflow: hidden;
   background: var(--bg-panel);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.panel-focused {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 4px 20px rgba(0, 212, 255, 0.08);
+}
+
+.panel-focused .panel-header {
+  background: linear-gradient(to right, var(--bg-header), rgba(0, 212, 255, 0.1));
 }
 
 .panel-header {
@@ -590,6 +600,88 @@ body {
   border-color: var(--accent);
   color: var(--accent);
   background: var(--bg-secondary);
+}
+
+/* ===== Shortcut Help ===== */
+.shortcut-modal {
+  width: 520px;
+  max-height: 600px;
+}
+
+.shortcut-body {
+  padding: 14px 20px 20px;
+  overflow-y: auto;
+}
+
+.shortcut-group {
+  margin-bottom: 18px;
+}
+
+.shortcut-group-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--accent);
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.shortcut-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 13px;
+}
+
+.shortcut-desc {
+  color: var(--text-primary);
+}
+
+.shortcut-keys {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  padding: 2px 6px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-primary);
+}
+
+.kbd-plus {
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 0 2px;
+}
+
+.help-btn {
+  width: 32px;
+  padding: 6px;
+  font-weight: 700;
+  justify-content: center;
+}
+
+.empty-tip {
+  margin-top: 20px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.empty-tip kbd {
+  margin: 0 2px;
 }
 
 /* ===== Scrollbar ===== */
