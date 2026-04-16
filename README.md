@@ -1,3 +1,4 @@
+
 # BoxTer
 
 A tiling workspace manager for your desktop. Run terminals, browsers, and notes side by side in resizable panels — all in one window.
