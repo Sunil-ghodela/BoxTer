@@ -1,0 +1,27 @@
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('boxterAPI', {
+  // Terminal
+  terminal: {
+    create: (id, cols, rows) => ipcRenderer.invoke('terminal:create', { id, cols, rows }),
+    write: (id, data) => ipcRenderer.send('terminal:write', { id, data }),
+    resize: (id, cols, rows) => ipcRenderer.send('terminal:resize', { id, cols, rows }),
+    kill: (id) => ipcRenderer.send('terminal:kill', { id }),
+    onData: (callback) => {
+      const listener = (event, payload) => callback(payload.id, payload.data);
+      ipcRenderer.on('terminal:data', listener);
+      return () => ipcRenderer.removeListener('terminal:data', listener);
+    },
+  },
+
+  // Sessions
+  session: {
+    save: (name, data) => ipcRenderer.invoke('session:save', { name, data }),
+    load: (name) => ipcRenderer.invoke('session:load', { name }),
+    list: () => ipcRenderer.invoke('session:list'),
+    delete: (name) => ipcRenderer.invoke('session:delete', { name }),
+  },
+
+  // External
+  openExternal: (url) => ipcRenderer.send('open:external', url),
+});
