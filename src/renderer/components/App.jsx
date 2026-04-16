@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Responsive, WidthProvider } from 'react-grid-layout';
 import Toolbar from './Toolbar.jsx';
 import WorkspaceTabs from './WorkspaceTabs.jsx';
@@ -8,6 +8,7 @@ import BrowserPanel from './BrowserPanel.jsx';
 import NotesPanel from './NotesPanel.jsx';
 import SessionManager from './SessionManager.jsx';
 import ShortcutHelp from './ShortcutHelp.jsx';
+import CommandPalette from './CommandPalette.jsx';
 import useKeyboardShortcuts from '../hooks/useKeyboardShortcuts.js';
 import 'react-grid-layout/css/styles.css';
 
@@ -43,6 +44,7 @@ export default function App() {
   const [activeId, setActiveId] = useState(null);
   const [showSessionManager, setShowSessionManager] = useState(false);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [isRestored, setIsRestored] = useState(false);
   const autoSaveTimer = useRef(null);
   // Undo stack — per workspace
@@ -376,6 +378,7 @@ export default function App() {
     { key: 'Tab', ctrl: true,             handler: () => nextWorkspace(1) },
     { key: 'Tab', ctrl: true, shift: true, handler: () => nextWorkspace(-1) },
     { key: '/', ctrl: true, handler: () => setShowShortcutHelp((s) => !s) },
+    { key: 'k', ctrl: true, handler: () => setShowCommandPalette((s) => !s) },
     { key: 's', ctrl: true, handler: () => setShowSessionManager(true) },
     { key: 'F2', handler: () => {
       if (!focusedId) return;
@@ -383,6 +386,7 @@ export default function App() {
       panel?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
     }},
     { key: 'Escape', ignoreInInputs: false, handler: () => {
+      if (showCommandPalette) { setShowCommandPalette(false); return; }
       if (showShortcutHelp) { setShowShortcutHelp(false); return; }
       if (showSessionManager) { setShowSessionManager(false); return; }
       if (maximizedId) updateActive((w) => ({ ...w, maximizedId: null }));
@@ -399,11 +403,103 @@ export default function App() {
   ], [
     addPanel, removePanel, duplicatePanel, toggleMaximize, togglePin,
     undoCloseLastPanel, focusByIndex, addWorkspace, nextWorkspace,
-    focusedId, maximizedId, showShortcutHelp, showSessionManager, workspaces,
-    updateActive,
+    focusedId, maximizedId, showShortcutHelp, showSessionManager, showCommandPalette,
+    workspaces, updateActive,
   ]);
 
   useKeyboardShortcuts(shortcuts);
+
+  // Commands available in the palette (Ctrl+K).
+  const commands = useMemo(() => {
+    const focusedPanel = activeWs?.panels.find((p) => p.id === focusedId) || null;
+    const list = [
+      // Panels
+      { id: 'new-terminal', category: 'Panel', label: 'New Terminal',
+        keys: ['Ctrl', 'T'], handler: () => addPanel('terminal') },
+      { id: 'new-browser',  category: 'Panel', label: 'New Browser',
+        keys: ['Ctrl', 'B'], handler: () => addPanel('browser') },
+      { id: 'new-notes',    category: 'Panel', label: 'New Notes',
+        keys: ['Ctrl', 'E'], handler: () => addPanel('notes') },
+    ];
+    if (focusedPanel) {
+      list.push(
+        { id: 'close-focused', category: 'Panel',
+          label: `Close "${focusedPanel.name || focusedPanel.type}"`,
+          keys: ['Ctrl', 'W'], handler: () => removePanel(focusedPanel.id) },
+        { id: 'dup-focused', category: 'Panel',
+          label: `Duplicate "${focusedPanel.name || focusedPanel.type}"`,
+          keys: ['Ctrl', 'D'], handler: () => duplicatePanel(focusedPanel.id) },
+        { id: 'rename-focused', category: 'Panel',
+          label: `Rename "${focusedPanel.name || focusedPanel.type}"`,
+          keys: ['F2'], handler: () => {
+            const el = document.querySelector('.workspace-active .panel-focused .panel-type');
+            el?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+          }},
+        { id: 'max-focused', category: 'Panel',
+          label: maximizedId ? 'Restore panel' : 'Maximize panel',
+          keys: ['Ctrl', 'M'], handler: () => toggleMaximize(focusedPanel.id) },
+        { id: 'pin-focused', category: 'Panel',
+          label: focusedPanel.pinned ? 'Unpin panel' : 'Pin panel',
+          keys: ['Alt', 'P'], handler: () => togglePin(focusedPanel.id) },
+      );
+    }
+    list.push(
+      { id: 'undo-close', category: 'Panel',
+        label: 'Reopen last closed panel',
+        keys: ['Ctrl', 'Shift', 'T'], handler: undoCloseLastPanel },
+    );
+    // Workspaces
+    list.push(
+      { id: 'new-ws', category: 'Workspace', label: 'New workspace',
+        keys: ['Ctrl', 'Shift', 'N'], handler: addWorkspace },
+      { id: 'next-ws', category: 'Workspace', label: 'Next workspace',
+        keys: ['Ctrl', 'Tab'], handler: () => nextWorkspace(1) },
+      { id: 'prev-ws', category: 'Workspace', label: 'Previous workspace',
+        keys: ['Ctrl', 'Shift', 'Tab'], handler: () => nextWorkspace(-1) },
+    );
+    workspaces.forEach((w) => {
+      if (w.id === activeId) return;
+      list.push({
+        id: `switch-${w.id}`,
+        category: 'Workspace',
+        label: `Switch to "${w.name}"`,
+        handler: () => switchWorkspace(w.id),
+      });
+    });
+    if (activeWs) {
+      list.push({
+        id: 'rename-ws',
+        category: 'Workspace',
+        label: `Rename "${activeWs.name}"`,
+        handler: () => {
+          const el = document.querySelector('.ws-tab-active .ws-tab-name');
+          el?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+        },
+      });
+      if (workspaces.length > 1) {
+        list.push({
+          id: 'close-ws',
+          category: 'Workspace',
+          label: `Close "${activeWs.name}"`,
+          handler: () => removeWorkspace(activeWs.id),
+        });
+      }
+    }
+    // Sessions / help
+    list.push(
+      { id: 'open-sessions', category: 'Session',
+        label: 'Open session manager',
+        keys: ['Ctrl', 'S'], handler: () => setShowSessionManager(true) },
+      { id: 'show-help', category: 'Help',
+        label: 'Show keyboard shortcuts',
+        keys: ['Ctrl', '/'], handler: () => setShowShortcutHelp(true) },
+    );
+    return list;
+  }, [
+    activeWs, activeId, focusedId, maximizedId, workspaces,
+    addPanel, removePanel, duplicatePanel, toggleMaximize, togglePin,
+    undoCloseLastPanel, addWorkspace, nextWorkspace, switchWorkspace, removeWorkspace,
+  ]);
 
   const renderPanel = (panel) => {
     switch (panel.type) {
@@ -441,6 +537,13 @@ export default function App() {
 
       {showShortcutHelp && (
         <ShortcutHelp onClose={() => setShowShortcutHelp(false)} />
+      )}
+
+      {showCommandPalette && (
+        <CommandPalette
+          commands={commands}
+          onClose={() => setShowCommandPalette(false)}
+        />
       )}
 
       <div className="workspace-stack">

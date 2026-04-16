@@ -29,6 +29,7 @@ const SHORTCUTS = [
     { keys: ['Ctrl', 'S'],        desc: 'Open session manager' },
   ]},
   { group: 'Help', items: [
+    { keys: ['Ctrl', 'K'],        desc: 'Command palette (search all actions)' },
     { keys: ['Ctrl', '/'],        desc: 'Toggle this shortcut panel' },
     { keys: ['Esc'],              desc: 'Close modals' },
   ]},
