@@ -12,9 +12,12 @@ export default function PanelWrapper({ id, type, onRemove, children }) {
       <div className="panel-header">
         <span className="panel-type">{TYPE_LABELS[type] || type}</span>
         <button
-          className="panel-close"
+          className="panel-close no-drag"
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
+            e.preventDefault();
             onRemove(id);
           }}
           title="Close panel"

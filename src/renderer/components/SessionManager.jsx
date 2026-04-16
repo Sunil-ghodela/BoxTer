@@ -1,12 +1,32 @@
 import React, { useState, useEffect, useCallback } from 'react';
 
+const INTERNAL_PREFIX = '__';
+
+function relativeTime(timestamp) {
+  if (!timestamp) return '';
+  const diffMs = Date.now() - timestamp;
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 60) return 'just now';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin} min ago`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour} hr ago`;
+  const diffDay = Math.floor(diffHour / 24);
+  if (diffDay < 7) return `${diffDay} day${diffDay === 1 ? '' : 's'} ago`;
+  return new Date(timestamp).toLocaleDateString();
+}
+
 export default function SessionManager({ onSave, onLoad, onClose }) {
   const [sessions, setSessions] = useState([]);
   const [newName, setNewName] = useState('');
 
   const refreshSessions = useCallback(async () => {
     const list = await window.boxterAPI?.session.list();
-    setSessions(list || []);
+    // Filter out internal sessions (like __last_session__) and sort newest first
+    const filtered = (list || [])
+      .filter((s) => !s.name.startsWith(INTERNAL_PREFIX))
+      .sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
+    setSessions(filtered);
   }, []);
 
   useEffect(() => {
@@ -60,7 +80,7 @@ export default function SessionManager({ onSave, onLoad, onClose }) {
                 <div className="session-info">
                   <span className="session-name">{s.name}</span>
                   <span className="session-date">
-                    {new Date(s.savedAt).toLocaleDateString()}
+                    {relativeTime(s.savedAt)}
                   </span>
                 </div>
                 <div className="session-actions">

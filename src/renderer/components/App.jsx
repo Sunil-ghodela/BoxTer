@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Responsive, WidthProvider } from 'react-grid-layout';
 import Toolbar from './Toolbar.jsx';
 import PanelWrapper from './PanelWrapper.jsx';
@@ -19,10 +19,49 @@ const PANEL_DEFAULTS = {
   notes:    { w: 3, h: 3, minW: 2, minH: 2 },
 };
 
+const AUTO_SESSION = '__last_session__';
+
 export default function App() {
   const [panels, setPanels] = useState([]);
   const [layouts, setLayouts] = useState({ lg: [] });
   const [showSessionManager, setShowSessionManager] = useState(false);
+  const [isRestored, setIsRestored] = useState(false);
+  const autoSaveTimer = useRef(null);
+
+  // Restore last session on first mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await window.boxterAPI?.session.load(AUTO_SESSION);
+        if (data && Array.isArray(data.panels) && data.panels.length > 0) {
+          setPanels(data.panels);
+          setLayouts(data.layouts || { lg: [] });
+          const maxNum = data.panels.reduce((max, p) => {
+            const num = parseInt((p.id || '').replace('panel-', ''), 10);
+            return isNaN(num) ? max : Math.max(max, num);
+          }, 0);
+          panelCounter = maxNum;
+        }
+      } catch (e) { /* ignore */ }
+      setIsRestored(true);
+    })();
+  }, []);
+
+  // Auto-save last session whenever panels or layouts change (debounced)
+  useEffect(() => {
+    if (!isRestored) return; // don't auto-save before restore finishes
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => {
+      const data = {
+        panels: panels.map((p) => ({ id: p.id, type: p.type })),
+        layouts,
+      };
+      window.boxterAPI?.session.save(AUTO_SESSION, data).catch(() => {});
+    }, 500);
+    return () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    };
+  }, [panels, layouts, isRestored]);
 
   const addPanel = useCallback((type) => {
     const id = genId();
@@ -130,6 +169,7 @@ export default function App() {
             rowHeight={60}
             onLayoutChange={onLayoutChange}
             draggableHandle=".panel-header"
+            draggableCancel=".panel-close,.no-drag,button,input,textarea,webview"
             resizeHandles={['se', 'sw', 'ne', 'nw', 'e', 'w', 'n', 's']}
             compactType="vertical"
             margin={[6, 6]}
