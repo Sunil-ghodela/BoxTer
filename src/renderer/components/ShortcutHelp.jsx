@@ -8,6 +8,7 @@ const SHORTCUTS = [
     { keys: ['Ctrl', 'W'],        desc: 'Close focused panel' },
     { keys: ['Ctrl', 'Shift', 'T'], desc: 'Undo close (reopen)' },
     { keys: ['Ctrl', 'D'],        desc: 'Duplicate focused panel' },
+    { keys: ['Ctrl', 'M'],        desc: 'Maximize / restore focused panel' },
   ]},
   { group: 'Navigation', items: [
     { keys: ['Ctrl', '1..9'],     desc: 'Focus panel by index' },
@@ -15,7 +16,7 @@ const SHORTCUTS = [
   ]},
   { group: 'Editing', items: [
     { keys: ['F2'],               desc: 'Rename focused panel' },
-    { keys: ['Double-click'],     desc: 'Rename: click panel title' },
+    { keys: ['Double-click'],     desc: 'On title: rename / On header: maximize' },
   ]},
   { group: 'Sessions', items: [
     { keys: ['Ctrl', 'S'],        desc: 'Open session manager' },

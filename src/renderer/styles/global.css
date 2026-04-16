@@ -132,6 +132,26 @@ body {
   transition: none !important;
 }
 
+/* Maximize: one panel takes over the whole grid-container; other items stay
+   mounted (state preserved) but hidden behind it. */
+.layout-has-maximized > .react-grid-item:not(.grid-item-maximized) {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.react-grid-item.grid-item-maximized {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  transform: none !important;
+  z-index: 50;
+  transition: none !important;
+}
+
 .react-grid-item.react-grid-placeholder {
   background: var(--accent) !important;
   opacity: 0.15 !important;

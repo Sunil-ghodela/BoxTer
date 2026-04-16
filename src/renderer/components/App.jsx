@@ -30,6 +30,7 @@ export default function App() {
   const [showSessionManager, setShowSessionManager] = useState(false);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const [focusedId, setFocusedId] = useState(null);
+  const [maximizedId, setMaximizedId] = useState(null);
   const [isRestored, setIsRestored] = useState(false);
   const autoSaveTimer = useRef(null);
   const closedStackRef = useRef([]); // stack of { panel, layout } for undo
@@ -110,8 +111,9 @@ export default function App() {
       window.boxterAPI.terminal.kill(id);
     }
 
-    // Clear focus if it was the focused panel
+    // Clear focus + maximize if it was that panel
     setFocusedId((cur) => (cur === id ? null : cur));
+    setMaximizedId((cur) => (cur === id ? null : cur));
   }, []);
 
   const undoCloseLastPanel = useCallback(() => {
@@ -130,11 +132,18 @@ export default function App() {
 
   const focusByIndex = useCallback((idx) => {
     const panel = panels[idx];
-    if (panel) setFocusedId(panel.id);
+    if (!panel) return;
+    setFocusedId(panel.id);
+    setMaximizedId((cur) => (cur ? panel.id : cur));
   }, [panels]);
 
   const renamePanel = useCallback((id, newName) => {
     setPanels((prev) => prev.map((p) => (p.id === id ? { ...p, name: newName || undefined } : p)));
+  }, []);
+
+  const toggleMaximize = useCallback((id) => {
+    setMaximizedId((cur) => (cur === id ? null : id));
+    setFocusedId(id);
   }, []);
 
   const duplicatePanel = useCallback((id) => {
@@ -214,6 +223,7 @@ export default function App() {
     { key: 'e', ctrl: true, handler: () => addPanel('notes') },
     { key: 'w', ctrl: true, handler: () => { if (focusedId) removePanel(focusedId); } },
     { key: 'd', ctrl: true, handler: () => { if (focusedId) duplicatePanel(focusedId); } },
+    { key: 'm', ctrl: true, handler: () => { if (focusedId) toggleMaximize(focusedId); } },
     { key: 't', ctrl: true, shift: true, handler: undoCloseLastPanel },
     { key: '?', ctrl: true, shift: true, handler: () => setShowShortcutHelp((s) => !s) },
     { key: '/', ctrl: true, handler: () => setShowShortcutHelp((s) => !s) },
@@ -224,11 +234,15 @@ export default function App() {
       // Dispatch a dblclick to trigger the existing rename flow
       panel?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
     }},
-    { key: 'Escape', ignoreInInputs: false, handler: () => { setShowShortcutHelp(false); setShowSessionManager(false); } },
+    { key: 'Escape', ignoreInInputs: false, handler: () => {
+      if (showShortcutHelp) { setShowShortcutHelp(false); return; }
+      if (showSessionManager) { setShowSessionManager(false); return; }
+      if (maximizedId) { setMaximizedId(null); return; }
+    } },
     ...[1,2,3,4,5,6,7,8,9].map((n) => ({
       key: String(n), ctrl: true, handler: () => focusByIndex(n - 1),
     })),
-  ], [addPanel, removePanel, duplicatePanel, undoCloseLastPanel, focusedId, focusByIndex]);
+  ], [addPanel, removePanel, duplicatePanel, toggleMaximize, undoCloseLastPanel, focusedId, focusByIndex, maximizedId, showShortcutHelp, showSessionManager]);
 
   useKeyboardShortcuts(shortcuts);
 
@@ -282,7 +296,7 @@ export default function App() {
           </div>
         ) : (
           <ResponsiveGrid
-            className="layout"
+            className={`layout${maximizedId ? ' layout-has-maximized' : ''}`}
             layouts={layouts}
             breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480 }}
             cols={{ lg: 12, md: 10, sm: 6, xs: 4 }}
@@ -293,18 +307,25 @@ export default function App() {
             resizeHandles={['se', 'sw', 'ne', 'nw', 'e', 'w', 'n', 's']}
             compactType="vertical"
             margin={[6, 6]}
+            isDraggable={!maximizedId}
+            isResizable={!maximizedId}
           >
             {panels.map((panel) => (
-              <div key={panel.id}>
+              <div
+                key={panel.id}
+                className={panel.id === maximizedId ? 'grid-item-maximized' : ''}
+              >
                 <PanelWrapper
                   id={panel.id}
                   type={panel.type}
                   name={panel.name}
                   isFocused={panel.id === focusedId}
+                  isMaximized={panel.id === maximizedId}
                   onFocus={() => setFocusedId(panel.id)}
                   onRemove={removePanel}
                   onRename={renamePanel}
                   onDuplicate={duplicatePanel}
+                  onToggleMaximize={toggleMaximize}
                 >
                   {renderPanel(panel)}
                 </PanelWrapper>

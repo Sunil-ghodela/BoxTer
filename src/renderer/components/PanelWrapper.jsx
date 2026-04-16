@@ -17,10 +17,12 @@ export default function PanelWrapper({
   type,
   name,
   isFocused,
+  isMaximized,
   onFocus,
   onRemove,
   onRename,
   onDuplicate,
+  onToggleMaximize,
   children,
 }) {
   const [editing, setEditing] = useState(false);
@@ -60,11 +62,18 @@ export default function PanelWrapper({
 
   return (
     <div
-      className={`panel panel-${type}${isFocused ? ' panel-focused' : ''}`}
+      className={`panel panel-${type}${isFocused ? ' panel-focused' : ''}${isMaximized ? ' panel-maximized' : ''}`}
       onMouseDown={onFocus}
       onFocus={onFocus}
     >
-      <div className="panel-header">
+      <div
+        className="panel-header"
+        onDoubleClick={(e) => {
+          // Ignore if double-click came from the title (which handles rename)
+          if (e.target.closest('.panel-type, .panel-name-input, button')) return;
+          onToggleMaximize?.(id);
+        }}
+      >
         {editing ? (
           <input
             ref={inputRef}
@@ -115,6 +124,20 @@ export default function PanelWrapper({
               title="Duplicate panel (Ctrl+D)"
             >
               d
+            </button>
+          )}
+          {onToggleMaximize && (
+            <button
+              className="panel-icon-btn no-drag"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                onToggleMaximize(id);
+              }}
+              title={isMaximized ? 'Restore (Ctrl+M)' : 'Maximize (Ctrl+M)'}
+            >
+              {isMaximized ? '-' : '^'}
             </button>
           )}
           <button
