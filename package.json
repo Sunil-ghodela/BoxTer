@@ -74,7 +74,8 @@
         "AppImage",
         "deb"
       ],
-      "category": "Utility"
+      "category": "Utility",
+      "maintainer": "Sunil-ghodela <sunil-ghodela@users.noreply.github.com>"
     },
     "mac": {
       "target": [

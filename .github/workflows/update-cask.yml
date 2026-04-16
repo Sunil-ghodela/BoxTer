@@ -1,0 +1,85 @@
+# Auto-bump the Homebrew cask in Sunil-ghodela/homebrew-boxter whenever a
+# release is published on this repo. The draft release created by release.yml
+# does NOT trigger this — you have to click "Publish" on the GitHub release
+# page first. That's intentional: it gives you a chance to smoke-test the
+# installers before pushing an update to Homebrew users.
+#
+# One-time setup:
+#   1. Create public repo: github.com/Sunil-ghodela/homebrew-boxter
+#   2. Copy packaging/homebrew/boxter.rb → Casks/boxter.rb in that repo
+#   3. Generate a fine-grained PAT with Contents: write on homebrew-boxter
+#   4. Add it as secret HOMEBREW_TAP_TOKEN in this repo's settings
+
+name: Update Homebrew Cask
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v1.0.0)'
+        required: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve tag
+        id: tag
+        run: |
+          TAG="${{ inputs.tag || github.event.release.tag_name }}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Download DMGs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          VER: ${{ steps.tag.outputs.version }}
+        run: |
+          gh release download "$TAG" --repo ${{ github.repository }} \
+            --pattern "BoxTer-${VER}.dmg" \
+            --pattern "BoxTer-${VER}-arm64.dmg"
+          echo "SHA_X64=$(shasum -a 256 "BoxTer-${VER}.dmg" | awk '{print $1}')" >> "$GITHUB_ENV"
+          echo "SHA_ARM64=$(shasum -a 256 "BoxTer-${VER}-arm64.dmg" | awk '{print $1}')" >> "$GITHUB_ENV"
+
+      - name: Checkout tap
+        uses: actions/checkout@v4
+        with:
+          repository: Sunil-ghodela/homebrew-boxter
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
+
+      - name: Update cask
+        env:
+          VER: ${{ steps.tag.outputs.version }}
+        run: |
+          CASK=tap/Casks/boxter.rb
+          # Bump version
+          sed -i -E "s/^(\s*version )\"[^\"]+\"/\1\"${VER}\"/" "$CASK"
+          # Replace sha256 values: first occurrence = arm (on_arm block first),
+          # second = x64. Count-based replacement keeps the file format stable.
+          awk -v arm="$SHA_ARM64" -v x64="$SHA_X64" '
+            /sha256 "/ {
+              n++
+              if (n == 1)      sub(/"[^"]+"/, "\"" arm "\"")
+              else if (n == 2) sub(/"[^"]+"/, "\"" x64 "\"")
+            }
+            { print }
+          ' "$CASK" > "$CASK.tmp" && mv "$CASK.tmp" "$CASK"
+
+      - name: Commit & push
+        env:
+          VER: ${{ steps.tag.outputs.version }}
+        run: |
+          cd tap
+          git config user.name  "boxter-bot"
+          git config user.email "boxter-bot@users.noreply.github.com"
+          if git diff --quiet Casks/boxter.rb; then
+            echo "Cask already up to date — nothing to commit."
+            exit 0
+          fi
+          git add Casks/boxter.rb
+          git commit -m "Bump boxter to ${VER}"
+          git push
