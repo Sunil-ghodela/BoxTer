@@ -137,6 +137,47 @@ export default function App() {
     setPanels((prev) => prev.map((p) => (p.id === id ? { ...p, name: newName || undefined } : p)));
   }, []);
 
+  const duplicatePanel = useCallback((id) => {
+    const source = panels.find((p) => p.id === id);
+    if (!source) return;
+    const sourceLayout = (layouts.lg || []).find((l) => l.i === id);
+    const newId = genId();
+
+    // Clone type-specific state
+    if (source.type === 'notes') {
+      try {
+        const content = localStorage.getItem(`boxter-notes-${id}`);
+        if (content) localStorage.setItem(`boxter-notes-${newId}`, content);
+      } catch (e) { /* ignore */ }
+    }
+
+    const newPanel = {
+      id: newId,
+      type: source.type,
+      name: source.name ? `${source.name} (copy)` : undefined,
+    };
+
+    const defaults = PANEL_DEFAULTS[source.type];
+    const newLayout = sourceLayout
+      ? {
+          i: newId,
+          x: sourceLayout.x,
+          y: sourceLayout.y + sourceLayout.h,
+          w: sourceLayout.w,
+          h: sourceLayout.h,
+          minW: defaults.minW,
+          minH: defaults.minH,
+        }
+      : { i: newId, x: 0, y: Infinity, ...defaults };
+
+    setPanels((prev) => [...prev, newPanel]);
+    setLayouts((prev) => ({
+      ...prev,
+      lg: [...(prev.lg || []), newLayout],
+    }));
+    setFocusedId(newId);
+  }, [panels, layouts]);
+
   const onLayoutChange = useCallback((layout, allLayouts) => {
     setLayouts(allLayouts);
   }, []);
@@ -172,6 +213,7 @@ export default function App() {
     { key: 'b', ctrl: true, handler: () => addPanel('browser') },
     { key: 'e', ctrl: true, handler: () => addPanel('notes') },
     { key: 'w', ctrl: true, handler: () => { if (focusedId) removePanel(focusedId); } },
+    { key: 'd', ctrl: true, handler: () => { if (focusedId) duplicatePanel(focusedId); } },
     { key: 't', ctrl: true, shift: true, handler: undoCloseLastPanel },
     { key: '?', ctrl: true, shift: true, handler: () => setShowShortcutHelp((s) => !s) },
     { key: '/', ctrl: true, handler: () => setShowShortcutHelp((s) => !s) },
@@ -186,7 +228,7 @@ export default function App() {
     ...[1,2,3,4,5,6,7,8,9].map((n) => ({
       key: String(n), ctrl: true, handler: () => focusByIndex(n - 1),
     })),
-  ], [addPanel, removePanel, undoCloseLastPanel, focusedId, focusByIndex]);
+  ], [addPanel, removePanel, duplicatePanel, undoCloseLastPanel, focusedId, focusByIndex]);
 
   useKeyboardShortcuts(shortcuts);
 
@@ -262,6 +304,7 @@ export default function App() {
                   onFocus={() => setFocusedId(panel.id)}
                   onRemove={removePanel}
                   onRename={renamePanel}
+                  onDuplicate={duplicatePanel}
                 >
                   {renderPanel(panel)}
                 </PanelWrapper>

@@ -20,6 +20,7 @@ export default function PanelWrapper({
   onFocus,
   onRemove,
   onRename,
+  onDuplicate,
   children,
 }) {
   const [editing, setEditing] = useState(false);
@@ -98,10 +99,24 @@ export default function PanelWrapper({
               e.preventDefault();
               startEditing(e);
             }}
-            title="Rename panel"
+            title="Rename panel (F2)"
           >
             r
           </button>
+          {onDuplicate && (
+            <button
+              className="panel-icon-btn no-drag"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                onDuplicate(id);
+              }}
+              title="Duplicate panel (Ctrl+D)"
+            >
+              d
+            </button>
+          )}
           <button
             className="panel-close no-drag"
             onMouseDown={(e) => e.stopPropagation()}
