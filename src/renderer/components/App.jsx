@@ -59,7 +59,7 @@ export default function App() {
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     autoSaveTimer.current = setTimeout(() => {
       const data = {
-        panels: panels.map((p) => ({ id: p.id, type: p.type })),
+        panels: panels.map((p) => ({ id: p.id, type: p.type, name: p.name })),
         layouts,
       };
       window.boxterAPI?.session.save(AUTO_SESSION, data).catch(() => {});
@@ -133,6 +133,10 @@ export default function App() {
     if (panel) setFocusedId(panel.id);
   }, [panels]);
 
+  const renamePanel = useCallback((id, newName) => {
+    setPanels((prev) => prev.map((p) => (p.id === id ? { ...p, name: newName || undefined } : p)));
+  }, []);
+
   const onLayoutChange = useCallback((layout, allLayouts) => {
     setLayouts(allLayouts);
   }, []);
@@ -140,7 +144,7 @@ export default function App() {
   // Session save/load
   const saveSession = useCallback(async (name) => {
     const sessionData = {
-      panels: panels.map((p) => ({ id: p.id, type: p.type })),
+      panels: panels.map((p) => ({ id: p.id, type: p.type, name: p.name })),
       layouts,
     };
     await window.boxterAPI?.session.save(name, sessionData);
@@ -172,6 +176,12 @@ export default function App() {
     { key: '?', ctrl: true, shift: true, handler: () => setShowShortcutHelp((s) => !s) },
     { key: '/', ctrl: true, handler: () => setShowShortcutHelp((s) => !s) },
     { key: 's', ctrl: true, handler: () => setShowSessionManager(true) },
+    { key: 'F2', handler: () => {
+      if (!focusedId) return;
+      const panel = document.querySelector(`.panel-focused .panel-type`);
+      // Dispatch a dblclick to trigger the existing rename flow
+      panel?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    }},
     { key: 'Escape', ignoreInInputs: false, handler: () => { setShowShortcutHelp(false); setShowSessionManager(false); } },
     ...[1,2,3,4,5,6,7,8,9].map((n) => ({
       key: String(n), ctrl: true, handler: () => focusByIndex(n - 1),
@@ -247,9 +257,11 @@ export default function App() {
                 <PanelWrapper
                   id={panel.id}
                   type={panel.type}
+                  name={panel.name}
                   isFocused={panel.id === focusedId}
                   onFocus={() => setFocusedId(panel.id)}
                   onRemove={removePanel}
+                  onRename={renamePanel}
                 >
                   {renderPanel(panel)}
                 </PanelWrapper>

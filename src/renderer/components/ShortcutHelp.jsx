@@ -12,6 +12,10 @@ const SHORTCUTS = [
     { keys: ['Ctrl', '1..9'],     desc: 'Focus panel by index' },
     { keys: ['Click'],            desc: 'Focus a panel' },
   ]},
+  { group: 'Editing', items: [
+    { keys: ['F2'],               desc: 'Rename focused panel' },
+    { keys: ['Double-click'],     desc: 'Rename: click panel title' },
+  ]},
   { group: 'Sessions', items: [
     { keys: ['Ctrl', 'S'],        desc: 'Open session manager' },
   ]},
