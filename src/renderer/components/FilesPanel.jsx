@@ -234,7 +234,18 @@ export default function FilesPanel({ id }) {
             const isImg = isImageFile(f);
             const thumb = thumbs[f.name];
             return (
-              <div key={f.name} className="files-item" title={f.name}>
+              <div
+                key={f.name}
+                className="files-item"
+                title={`${f.name}\n(drag to terminal to paste path)`}
+                draggable
+                onDragStart={(e) => {
+                  if (!f.path) return;
+                  e.dataTransfer.effectAllowed = 'copy';
+                  e.dataTransfer.setData('application/x-boxter-file-path', f.path);
+                  e.dataTransfer.setData('text/plain', f.path);
+                }}
+              >
                 <div
                   className={`files-thumb${isImg ? ' files-thumb-image' : ''}`}
                   onDoubleClick={() => onOpen(f.name)}

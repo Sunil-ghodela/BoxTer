@@ -10,10 +10,20 @@ import usePanZoom from '../hooks/usePanZoom.js';
 const MIN_PANEL_W = 200;
 const MIN_PANEL_H = 140;
 
-const renderBody = (panel) => {
+const renderBody = (panel, extras) => {
   switch (panel.type) {
-    case 'terminal': return <TerminalPanel id={panel.id} />;
-    case 'notes':    return <NotesPanel id={panel.id} />;
+    case 'terminal': return (
+      <TerminalPanel
+        id={panel.id}
+        tree={panel.tree}
+        focusedLeaf={panel.focusedLeaf}
+        onTreeChange={(t) => extras.onTerminalTree?.(panel.id, t)}
+        onFocusedLeafChange={(leafId) => extras.onFocusedLeaf?.(panel.id, leafId)}
+        onClose={() => extras.onClosePanel?.(panel.id)}
+        getPipeFor={extras.getPipeFor}
+      />
+    );
+    case 'notes':    return <NotesPanel id={panel.id} onSendToTerminal={extras.onSendToTerminal} />;
     case 'files':    return <FilesPanel id={panel.id} />;
     case 'browser':  return <BrowserPlaceholder id={panel.id} />;
     default: return <div>Unknown panel type</div>;
@@ -34,6 +44,11 @@ export default function CanvasView({
   onRename,
   onDuplicate,
   onTogglePin,
+  onSendToTerminal,
+  onTerminalTree,
+  onFocusedLeaf,
+  onClosePanel,
+  getPipeFor,
 }) {
   const containerRef = useRef(null);
   const worldRef = useRef(null);
@@ -266,7 +281,13 @@ export default function CanvasView({
                 onTogglePin={onTogglePin}
                 onHeaderMouseDown={(e) => onPanelDragStart(panel, e)}
               >
-                {renderBody(panel)}
+                {renderBody(panel, {
+                  onSendToTerminal,
+                  onTerminalTree,
+                  onFocusedLeaf,
+                  onClosePanel,
+                  getPipeFor,
+                })}
               </PanelWrapper>
               <div
                 className="canvas-resize-handle"

@@ -425,10 +425,118 @@ body {
 }
 
 /* ===== Terminal ===== */
+.terminal-root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.terminal-split {
+  flex: 1;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.terminal-split-h { flex-direction: row; }
+.terminal-split-v { flex-direction: column; }
+
+.terminal-pane {
+  display: flex;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+}
+
+.terminal-pane > * { flex: 1; min-width: 0; min-height: 0; }
+
+.terminal-divider {
+  flex-shrink: 0;
+  background: var(--border);
+  position: relative;
+  z-index: 2;
+  transition: background 0.12s;
+}
+
+.terminal-divider-h {
+  width: 4px;
+  cursor: col-resize;
+}
+
+.terminal-divider-v {
+  height: 4px;
+  cursor: row-resize;
+}
+
+.terminal-divider:hover,
+.terminal-divider:active {
+  background: var(--accent);
+}
+
+.terminal-leaf {
+  width: 100%;
+  height: 100%;
+  padding: 4px;
+  position: relative;
+  outline: none;
+}
+
+.terminal-leaf-focused {
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+/* Back-compat */
 .terminal-container {
   width: 100%;
   height: 100%;
   padding: 4px;
+  position: relative;
+}
+
+.terminal-drop-active {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.terminal-drop-overlay {
+  position: absolute;
+  inset: 4px;
+  background: rgba(0, 212, 255, 0.1);
+  border: 2px dashed var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.terminal-pipe-badge {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  padding: 2px 8px;
+  background: rgba(80, 250, 123, 0.18);
+  color: var(--success);
+  border: 1px solid var(--success);
+  border-radius: 10px;
+  font-size: 10px;
+  font-family: monospace;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  pointer-events: none;
+  z-index: 4;
+  animation: pipe-pulse 2s ease-in-out infinite;
+}
+
+@keyframes pipe-pulse {
+  0%, 100% { opacity: 0.75; }
+  50%      { opacity: 1;    }
 }
 
 .terminal-container .xterm {
@@ -557,9 +665,68 @@ body {
   color: var(--accent);
 }
 
+.notes-send-btn {
+  padding: 3px 10px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  color: var(--success);
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.notes-send-btn:hover {
+  border-color: var(--success);
+  background: rgba(80, 250, 123, 0.1);
+}
+
+.notes-send-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.notes-send-btn-paste {
+  color: var(--accent);
+}
+
+.notes-send-btn-paste:hover {
+  border-color: var(--accent);
+  background: rgba(0, 212, 255, 0.08);
+}
+
 .notes-hint {
   font-size: 11px;
   color: var(--text-muted);
+}
+
+.notes-flash {
+  margin-left: auto;
+  font-size: 11px;
+  font-family: monospace;
+  padding: 2px 8px;
+  border-radius: 10px;
+  animation: notes-flash-in 0.2s ease-out;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60%;
+}
+
+.notes-flash-ok {
+  color: var(--success);
+  background: rgba(80, 250, 123, 0.12);
+}
+
+.notes-flash-err {
+  color: var(--danger);
+  background: rgba(255, 71, 87, 0.12);
+}
+
+@keyframes notes-flash-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .notes-editor {
@@ -673,6 +840,11 @@ body {
   border-radius: var(--radius);
   overflow: hidden;
   transition: border-color 0.15s, transform 0.1s;
+  cursor: grab;
+}
+
+.files-item:active {
+  cursor: grabbing;
 }
 
 .files-item:hover {

@@ -59,10 +59,36 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 
 ### Phase 3.3 — Power Features
 
-- [ ] **Panel linking / pipes** — terminal output → notes auto-append
+- [x] **Panel linking / pipes** — _done 2026-04-17_
+  - **Files → Terminal drag**: drag any item from Files panel onto a Terminal → terminal gets the quoted path pasted (POSIX single-quote escape). Dashed cyan overlay while dragging.
+  - **Terminal → Notes pipe**: live stream terminal output into a Notes panel. ANSI escape codes stripped, line endings normalized. Configure via Command Palette (`Ctrl+K` → "Pipe \"Terminal\" → \"Notes\""), clear via "Stop piping...". Pipe state persists in localStorage; dangling pipes auto-cleaned when panels removed.
+  - Active pipe shows pulsing green badge ("↘ piping to {notes}") on the terminal.
+  - Works in both Grid and Canvas view.
+  - Files: `utils/ansi.js` (new), `TerminalPanel.jsx` (rewrite for pipe/drop), `NotesPanel.jsx` (append listener), `FilesPanel.jsx` (draggable items), `App.jsx` (pipes map, palette entries, cleanup), `CanvasView.jsx` (prop pass-through), `ShortcutHelp.jsx`, `global.css`
+  - ~~Terminal `cd` → Files panel sync~~ — deferred: Files panel is drop-zone storage, not a filesystem browser. Requires separate cwd-tracking feature.
 - [ ] **AI Assistant panel** — Claude API integration for in-context help
-- [ ] **Split terminal** — tmux-style horizontal/vertical splits in one panel
-- [ ] **Quick snippets** — `Ctrl+Enter` on notes selection → paste to terminal
+- [x] **Split terminal** — _done 2026-04-17_
+  - Each terminal panel holds a binary tree of panes (`leaf` | `split{dir,ratio,a,b}`), arbitrary nesting
+  - **`Alt+Shift+D`** — split focused pane horizontally (new pane to the right)
+  - **`Alt+Shift+S`** — split focused pane vertically (new pane below)
+  - **`Alt+Shift+W`** — close focused pane (closes whole panel if last pane)
+  - **Click** a pane to focus · **drag divider** to resize (ratio persists)
+  - Each leaf owns its own pty; all ptys killed on panel remove
+  - Duplicate panel: preserves tree shape with fresh leaf ids (new ptys)
+  - Tree + focusedLeaf persisted in auto-save / session save + restore
+  - Pipes now keyed by leaf id; palette offers "Pipe focused pane → Notes"
+  - Send-from-Notes + file drop target the focused leaf
+  - Works in Grid and Canvas view
+  - Files: `utils/terminalTree.js` (new), `TerminalLeaf.jsx` (new), `TerminalPanel.jsx` (rewrite as tree container), `App.jsx` (tree init + persistence + pty cleanup + leaf-aware pipes), `CanvasView.jsx` (prop passthrough), `ShortcutHelp.jsx`, `global.css` (split/divider/focused styles)
+- [x] **Quick snippets** — _done 2026-04-17_
+  - Notes panel: select text (or place caret on a line) → `Ctrl+Enter` sends to terminal + Enter
+  - `Ctrl+Shift+Enter` pastes without executing
+  - Toolbar: "→ Run" and "→ Paste" buttons (disabled when no terminal)
+  - Target: focused terminal in workspace, else last-created terminal
+  - Transient toast: "Ran 3 lines → Main" (green ok / red err), fades after 1.8s
+  - Works in both Grid and Canvas view (CanvasView passes the prop)
+  - Logged to Activity timeline
+  - Files: `NotesPanel.jsx` (rewrite), `App.jsx` (+sendToTerminal), `CanvasView.jsx` (+prop pass), `ShortcutHelp.jsx`, `global.css`
 - [x] **Workspace templates** — _done 2026-04-17_
   - 5 built-in templates: Dev Setup, Research, Debug, Writing, Learning
   - Each template spawns a new workspace with predefined panels + grid + canvas layouts

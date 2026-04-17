@@ -1,131 +1,191 @@
-import React, { useEffect, useRef } from 'react';
-import { Terminal } from 'xterm';
-import { FitAddon } from 'xterm-addon-fit';
-import 'xterm/css/xterm.css';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
+import TerminalLeaf from './TerminalLeaf.jsx';
+import {
+  splitTree,
+  closeLeaf,
+  setRatio,
+  firstLeafId,
+  genLeafId,
+  hasLeaf,
+  allLeaves,
+} from '../utils/terminalTree.js';
 
-export default function TerminalPanel({ id }) {
-  const containerRef = useRef(null);
-  const termRef = useRef(null);
-  const fitRef = useRef(null);
-  const cleanupRef = useRef(null);
+const DEFAULT_TREE = (id) => ({ t: 'leaf', id });
+
+export default function TerminalPanel({
+  id,
+  tree: treeProp,
+  focusedLeaf: focusedLeafProp,
+  onTreeChange,
+  onFocusedLeafChange,
+  onClose,
+  getPipeFor,
+}) {
+  // Work with a stable tree. If parent controls it, use prop; else local.
+  const [localTree, setLocalTree] = useState(() => treeProp || DEFAULT_TREE(id));
+  const tree = treeProp || localTree;
+
+  const updateTree = useCallback((next) => {
+    if (onTreeChange) onTreeChange(next);
+    else setLocalTree(next);
+  }, [onTreeChange]);
+
+  const [localFocused, setLocalFocused] = useState(() => focusedLeafProp || firstLeafId(tree) || id);
+  const focusedLeaf = focusedLeafProp || localFocused;
+
+  const setFocusedLeaf = useCallback((leafId) => {
+    if (onFocusedLeafChange) onFocusedLeafChange(leafId);
+    else setLocalFocused(leafId);
+  }, [onFocusedLeafChange]);
+
+  // Keep focused leaf valid when tree changes (leaf closed, etc.)
+  useEffect(() => {
+    if (!hasLeaf(tree, focusedLeaf)) {
+      const first = firstLeafId(tree);
+      if (first) setFocusedLeaf(first);
+    }
+  }, [tree, focusedLeaf, setFocusedLeaf]);
+
+  const doSplit = useCallback((dir) => {
+    const newLeafId = genLeafId(id);
+    updateTree(splitTree(tree, focusedLeaf, dir, newLeafId));
+    setFocusedLeaf(newLeafId);
+  }, [tree, focusedLeaf, id, updateTree, setFocusedLeaf]);
+
+  const doClose = useCallback(() => {
+    // Close the focused pane; if it's the only leaf, bubble up to close the panel
+    const leaves = allLeaves(tree);
+    if (leaves.length <= 1) {
+      onClose?.(id);
+      return;
+    }
+    const next = closeLeaf(tree, focusedLeaf);
+    if (!next) {
+      onClose?.(id);
+      return;
+    }
+    updateTree(next);
+    const nextFocus = firstLeafId(next);
+    if (nextFocus) setFocusedLeaf(nextFocus);
+  }, [tree, focusedLeaf, id, onClose, updateTree, setFocusedLeaf]);
+
+  // Divider drag to resize
+  const dragRef = useRef(null);
+  const startResize = useCallback((path, dir, container) => (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragRef.current = {
+      path,
+      dir,
+      startX: e.clientX,
+      startY: e.clientY,
+      container,
+      startRatio: null,
+    };
+  }, []);
 
   useEffect(() => {
-    if (!containerRef.current || termRef.current) return;
-
-    const term = new Terminal({
-      theme: {
-        background: '#1a1a2e',
-        foreground: '#e0e0e0',
-        cursor: '#00d4ff',
-        selectionBackground: '#3a3a5c',
-        black: '#1a1a2e',
-        red: '#ff5555',
-        green: '#50fa7b',
-        yellow: '#f1fa8c',
-        blue: '#6272a4',
-        magenta: '#ff79c6',
-        cyan: '#8be9fd',
-        white: '#e0e0e0',
-      },
-      fontSize: 14,
-      fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
-      cursorBlink: true,
-      cursorStyle: 'bar',
-      scrollback: 5000,
-    });
-
-    const fitAddon = new FitAddon();
-    term.loadAddon(fitAddon);
-    term.open(containerRef.current);
-
-    termRef.current = term;
-    fitRef.current = fitAddon;
-
-    // Ctrl/Cmd+Shift+C → copy, Ctrl/Cmd+Shift+V → paste. Also Ctrl+Insert/Shift+Insert.
-    // (Plain Ctrl+C stays as SIGINT so shells still work.)
-    term.attachCustomKeyEventHandler((e) => {
-      if (e.type !== 'keydown') return true;
-      const mod = e.ctrlKey || e.metaKey;
-      if (mod && e.shiftKey && (e.key === 'C' || e.key === 'c')) {
-        const sel = term.getSelection();
-        if (sel) { navigator.clipboard.writeText(sel).catch(() => {}); return false; }
-      }
-      if (mod && e.shiftKey && (e.key === 'V' || e.key === 'v')) {
-        navigator.clipboard.readText().then((txt) => {
-          if (txt) window.boxterAPI?.terminal.write(id, txt);
-        }).catch(() => {});
-        return false;
-      }
-      if (e.shiftKey && e.key === 'Insert') {
-        navigator.clipboard.readText().then((txt) => {
-          if (txt) window.boxterAPI?.terminal.write(id, txt);
-        }).catch(() => {});
-        return false;
-      }
-      return true;
-    });
-
-    // Right-click: copy if there's a selection, otherwise paste.
-    const onContextMenu = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const sel = term.getSelection();
-      if (sel) {
-        navigator.clipboard.writeText(sel).then(() => term.clearSelection()).catch(() => {});
-      } else {
-        navigator.clipboard.readText().then((txt) => {
-          if (txt) window.boxterAPI?.terminal.write(id, txt);
-        }).catch(() => {});
-      }
+    const onMove = (e) => {
+      const s = dragRef.current;
+      if (!s || !s.container) return;
+      const rect = s.container.getBoundingClientRect();
+      const size = s.dir === 'h' ? rect.width : rect.height;
+      if (!size) return;
+      const delta = s.dir === 'h' ? (e.clientX - s.startX) : (e.clientY - s.startY);
+      // Read current ratio at path
+      let node = tree;
+      for (const step of s.path) node = node[step];
+      if (s.startRatio == null) s.startRatio = node.ratio;
+      const ratio = s.startRatio + delta / size;
+      updateTree(setRatio(tree, s.path, ratio));
     };
-    const containerEl = containerRef.current;
-    containerEl.addEventListener('contextmenu', onContextMenu);
-
-    // Fit after a short delay to let the container settle
-    setTimeout(() => {
-      try {
-        fitAddon.fit();
-      } catch (e) { /* ignore */ }
-    }, 100);
-
-    // Create PTY process
-    const cols = term.cols;
-    const rows = term.rows;
-
-    window.boxterAPI?.terminal.create(id, cols, rows).then(() => {
-      // Send input to PTY
-      term.onData((data) => {
-        window.boxterAPI?.terminal.write(id, data);
-      });
-
-      // Receive output from PTY
-      cleanupRef.current = window.boxterAPI?.terminal.onData((termId, data) => {
-        if (termId === id && termRef.current) {
-          termRef.current.write(data);
-        }
-      });
-    });
-
-    // Resize observer
-    const resizeObserver = new ResizeObserver(() => {
-      try {
-        if (fitRef.current && termRef.current) {
-          fitRef.current.fit();
-          const { cols, rows } = termRef.current;
-          window.boxterAPI?.terminal.resize(id, cols, rows);
-        }
-      } catch (e) { /* ignore */ }
-    });
-    resizeObserver.observe(containerRef.current);
-
+    const onUp = () => { dragRef.current = null; };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
     return () => {
-      resizeObserver.disconnect();
-      containerEl.removeEventListener('contextmenu', onContextMenu);
-      if (cleanupRef.current) cleanupRef.current();
-      term.dispose();
-      termRef.current = null;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
     };
-  }, [id]);
+  }, [tree, updateTree]);
 
-  return <div ref={containerRef} className="terminal-container" />;
+  const renderNode = (node, path = [], containerRef = { current: null }) => {
+    if (node.t === 'leaf') {
+      const pipeInfo = getPipeFor ? getPipeFor(node.id) : null;
+      return (
+        <TerminalLeaf
+          key={node.id}
+          id={node.id}
+          isFocused={node.id === focusedLeaf}
+          onFocus={() => setFocusedLeaf(node.id)}
+          onSplitH={() => doSplit('h')}
+          onSplitV={() => doSplit('v')}
+          onClosePane={() => {
+            const leaves = allLeaves(tree);
+            if (leaves.length <= 1) {
+              onClose?.(id);
+            } else {
+              const next = closeLeaf(tree, node.id);
+              if (!next) onClose?.(id);
+              else {
+                updateTree(next);
+                const nf = firstLeafId(next);
+                if (nf) setFocusedLeaf(nf);
+              }
+            }
+          }}
+          pipeToNotes={pipeInfo?.notesId || null}
+          pipeLabel={pipeInfo?.label || null}
+        />
+      );
+    }
+    const dir = node.dir;
+    return (
+      <div
+        key={path.join('-') || 'root-split'}
+        className={`terminal-split terminal-split-${dir}`}
+        ref={(el) => { containerRef.current = el; }}
+      >
+        <div className="terminal-pane" style={{ flex: node.ratio }}>
+          {renderNode(node.a, [...path, 'a'], { current: null })}
+        </div>
+        <div
+          className={`terminal-divider terminal-divider-${dir}`}
+          onMouseDown={startResize(path, dir, containerRef.current)}
+        />
+        <div className="terminal-pane" style={{ flex: 1 - node.ratio }}>
+          {renderNode(node.b, [...path, 'b'], { current: null })}
+        </div>
+      </div>
+    );
+  };
+
+  // Ref for the root container so divider resize knows the axis size
+  const rootRef = useRef(null);
+
+  const renderTree = () => {
+    if (tree.t === 'leaf') {
+      return renderNode(tree, [], rootRef);
+    }
+    // Wrap with root ref so the top-level split can read its bounding box
+    const dir = tree.dir;
+    return (
+      <div
+        className={`terminal-split terminal-split-${dir}`}
+        ref={rootRef}
+      >
+        <div className="terminal-pane" style={{ flex: tree.ratio }}>
+          {renderNode(tree.a, ['a'], { current: null })}
+        </div>
+        <div
+          className={`terminal-divider terminal-divider-${dir}`}
+          onMouseDown={startResize([], dir, rootRef.current)}
+        />
+        <div className="terminal-pane" style={{ flex: 1 - tree.ratio }}>
+          {renderNode(tree.b, ['b'], { current: null })}
+        </div>
+      </div>
+    );
+  };
+
+  return <div className="terminal-root">{renderTree()}</div>;
 }

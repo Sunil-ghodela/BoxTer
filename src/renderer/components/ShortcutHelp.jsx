@@ -27,6 +27,21 @@ const SHORTCUTS = [
     { keys: ['F2'],               desc: 'Rename focused panel' },
     { keys: ['Double-click'],     desc: 'On title: rename / On header: maximize' },
   ]},
+  { group: 'Notes → Terminal', items: [
+    { keys: ['Ctrl', 'Enter'],    desc: 'Send selection (or current line) to terminal + Enter' },
+    { keys: ['Ctrl', 'Shift', 'Enter'], desc: 'Paste selection to terminal without Enter' },
+  ]},
+  { group: 'Panel linking', items: [
+    { keys: ['Drag'],             desc: 'Drag a file from Files panel → Terminal: pastes quoted path' },
+    { keys: ['Ctrl', 'K'],        desc: 'Pipe terminal → notes: palette has "Pipe \"T\" → \"N\"" entries' },
+  ]},
+  { group: 'Split terminal', items: [
+    { keys: ['Alt', 'Shift', 'D'],    desc: 'Split terminal horizontally (new pane to the right)' },
+    { keys: ['Alt', 'Shift', 'S'],    desc: 'Split terminal vertically (new pane below)' },
+    { keys: ['Alt', 'Shift', 'W'],    desc: 'Close focused pane (closes panel if last pane)' },
+    { keys: ['Click pane'],           desc: 'Focus a pane' },
+    { keys: ['Drag divider'],         desc: 'Resize panes' },
+  ]},
   { group: 'Sessions', items: [
     { keys: ['Ctrl', 'S'],        desc: 'Open session manager' },
   ]},

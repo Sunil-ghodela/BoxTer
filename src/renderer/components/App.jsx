@@ -15,6 +15,7 @@ import ActivityTimeline from './ActivityTimeline.jsx';
 import TemplatePicker from './TemplatePicker.jsx';
 import { getTemplate, TEMPLATES } from '../utils/templates.js';
 import { logActivity } from '../utils/activityLog.js';
+import { allLeaves, regenerateLeafIds, firstLeafId as firstLeaf } from '../utils/terminalTree.js';
 import UpdateBanner from './UpdateBanner.jsx';
 import StatusBanner from './StatusBanner.jsx';
 import CanvasView from './CanvasView.jsx';
@@ -196,7 +197,14 @@ export default function App() {
           const restored = data.workspaces.map((w) => ({
             id: w.id,
             name: w.name || 'Workspace',
-            panels: w.panels || [],
+            panels: (w.panels || []).map((p) => {
+              if (p.type !== 'terminal') return p;
+              const tree = p.tree || { t: 'leaf', id: p.id };
+              const fl = p.focusedLeaf && (tree.t === 'leaf' ? tree.id === p.focusedLeaf : true)
+                ? p.focusedLeaf
+                : firstLeaf(tree) || p.id;
+              return { ...p, tree, focusedLeaf: fl };
+            }),
             layouts: w.layouts || { lg: [] },
             focusedId: null,
             maximizedId: null,
@@ -255,9 +263,14 @@ export default function App() {
         workspaces: workspaces.map((w) => ({
           id: w.id,
           name: w.name,
-          panels: w.panels.map((p) => ({
-            id: p.id, type: p.type, name: p.name, pinned: p.pinned,
-          })),
+          panels: w.panels.map((p) => {
+            const base = { id: p.id, type: p.type, name: p.name, pinned: p.pinned };
+            if (p.type === 'terminal') {
+              base.tree = p.tree;
+              base.focusedLeaf = p.focusedLeaf;
+            }
+            return base;
+          }),
           layouts: w.layouts,
           viewMode: w.viewMode,
           canvasLayout: w.canvasLayout,
@@ -306,13 +319,18 @@ export default function App() {
     });
     const defaults = PANEL_DEFAULTS[type];
     const canvasDefaults = CANVAS_PANEL_DEFAULTS[type] || CANVAS_PANEL_DEFAULTS.terminal;
+    const newPanel = { id, type };
+    if (type === 'terminal') {
+      newPanel.tree = { t: 'leaf', id };
+      newPanel.focusedLeaf = id;
+    }
     updateActive((w) => {
       const occupied = w.layouts.lg || [];
       const maxY = occupied.reduce((max, l) => Math.max(max, l.y + l.h), 0);
       const spot = nextCanvasSpot(w.canvasLayout || {}, w.panels);
       return {
         ...w,
-        panels: [...w.panels, { id, type }],
+        panels: [...w.panels, newPanel],
         layouts: {
           ...w.layouts,
           lg: [...occupied, { i: id, x: 0, y: maxY, ...defaults }],
@@ -360,8 +378,12 @@ export default function App() {
         workspaceId: activeWs.id,
       });
     }
-    if (window.boxterAPI?.terminal) {
-      window.boxterAPI.terminal.kill(id);
+    // Kill every leaf's pty in a terminal panel (split-aware)
+    if (targetPanel?.type === 'terminal' && window.boxterAPI?.terminal) {
+      const leaves = targetPanel.tree ? allLeaves(targetPanel.tree) : [id];
+      leaves.forEach((leafId) => {
+        try { window.boxterAPI.terminal.kill(leafId); } catch { /* ignore */ }
+      });
     }
   }, [activeWs, updateActive]);
 
@@ -426,6 +448,20 @@ export default function App() {
     }));
   }, [updateActive]);
 
+  const setTerminalTree = useCallback((panelId, tree) => {
+    updateActive((w) => ({
+      ...w,
+      panels: w.panels.map((p) => (p.id === panelId ? { ...p, tree } : p)),
+    }));
+  }, [updateActive]);
+
+  const setFocusedLeaf = useCallback((panelId, leafId) => {
+    updateActive((w) => ({
+      ...w,
+      panels: w.panels.map((p) => (p.id === panelId ? { ...p, focusedLeaf: leafId } : p)),
+    }));
+  }, [updateActive]);
+
   const duplicatePanel = useCallback((id) => {
     if (!activeWs) return;
     const source = activeWs.panels.find((p) => p.id === id);
@@ -443,6 +479,14 @@ export default function App() {
       type: source.type,
       name: source.name ? `${source.name} (copy)` : undefined,
     };
+    if (source.type === 'terminal') {
+      // Copy tree shape with fresh leaf ids for new ptys
+      const freshTree = source.tree
+        ? regenerateLeafIds(source.tree, newId)
+        : { t: 'leaf', id: newId };
+      newPanel.tree = freshTree;
+      newPanel.focusedLeaf = firstLeaf(freshTree) || newId;
+    }
     const defaults = PANEL_DEFAULTS[source.type];
     const newLayout = sourceLayout
       ? { i: newId, x: sourceLayout.x, y: sourceLayout.y + sourceLayout.h,
@@ -566,7 +610,14 @@ export default function App() {
       workspaces: workspaces.map((w) => ({
         id: w.id,
         name: w.name,
-        panels: w.panels.map((p) => ({ id: p.id, type: p.type, name: p.name, pinned: p.pinned })),
+        panels: w.panels.map((p) => {
+          const base = { id: p.id, type: p.type, name: p.name, pinned: p.pinned };
+          if (p.type === 'terminal') {
+            base.tree = p.tree;
+            base.focusedLeaf = p.focusedLeaf;
+          }
+          return base;
+        }),
         layouts: w.layouts,
         viewMode: w.viewMode,
         canvasLayout: w.canvasLayout,
@@ -597,7 +648,11 @@ export default function App() {
       restored = data.workspaces.map((w) => ({
         id: w.id || genWsId(),
         name: w.name || 'Workspace',
-        panels: w.panels || [],
+        panels: (w.panels || []).map((p) => {
+          if (p.type !== 'terminal') return p;
+          const tree = p.tree || { t: 'leaf', id: p.id };
+          return { ...p, tree, focusedLeaf: p.focusedLeaf || firstLeaf(tree) || p.id };
+        }),
         layouts: w.layouts || { lg: [] },
         focusedId: null,
         maximizedId: null,
@@ -775,6 +830,34 @@ export default function App() {
         });
       }
     }
+    // Pipe: focused leaf of each terminal → notes
+    if (activeWs) {
+      const terms = activeWs.panels.filter((p) => p.type === 'terminal');
+      const notes = activeWs.panels.filter((p) => p.type === 'notes');
+      terms.forEach((t) => {
+        const leafId = t.focusedLeaf || (t.tree ? firstLeaf(t.tree) : t.id) || t.id;
+        const active = pipes[leafId];
+        const leafLabel = t.tree && t.tree.t === 'split' ? ' (focused pane)' : '';
+        if (active) {
+          const notePanel = activeWs.panels.find((p) => p.id === active);
+          list.push({
+            id: `unpipe-${leafId}`,
+            category: 'Pipe',
+            label: `Stop piping "${t.name || 'Terminal'}"${leafLabel} → "${notePanel?.name || 'Notes'}"`,
+            handler: () => setTerminalPipe(leafId, null),
+          });
+        }
+        notes.forEach((n) => {
+          if (active === n.id) return;
+          list.push({
+            id: `pipe-${leafId}-${n.id}`,
+            category: 'Pipe',
+            label: `Pipe "${t.name || 'Terminal'}"${leafLabel} → "${n.name || 'Notes'}"`,
+            handler: () => setTerminalPipe(leafId, n.id),
+          });
+        });
+      });
+    }
     // Theme / UI
     list.push(
       { id: 'cycle-theme', category: 'Theme',
@@ -809,13 +892,98 @@ export default function App() {
     undoCloseLastPanel, addWorkspace, nextWorkspace, switchWorkspace, removeWorkspace,
     cycleTheme, currentTheme, showStatusBanner, toggleStatusBanner,
     toggleViewMode, showActivity, toggleActivity, addWorkspaceFromTemplate,
+    pipes, setTerminalPipe,
   ]);
+
+  // Terminal → Notes pipe map, persisted in localStorage
+  const [pipes, setPipes] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('boxter-pipes') || '{}') || {}; }
+    catch { return {}; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('boxter-pipes', JSON.stringify(pipes)); } catch { /* ignore */ }
+  }, [pipes]);
+
+  const setTerminalPipe = useCallback((terminalId, notesId) => {
+    setPipes((prev) => {
+      const next = { ...prev };
+      if (notesId) next[terminalId] = notesId;
+      else delete next[terminalId];
+      return next;
+    });
+    if (!activeWs) return;
+    const term = activeWs.panels.find((p) => p.id === terminalId);
+    const note = notesId && activeWs.panels.find((p) => p.id === notesId);
+    logActivity({
+      category: 'content',
+      title: notesId
+        ? `Pipe: ${term?.name || 'Terminal'} → ${note?.name || 'Notes'}`
+        : `Pipe cleared on ${term?.name || 'Terminal'}`,
+      detail: activeWs.name,
+      workspaceId: activeWs.id,
+      panelId: terminalId,
+    });
+  }, [activeWs]);
+
+  // Clean up dangling pipes when panels are removed
+  useEffect(() => {
+    const allIds = new Set(workspaces.flatMap((w) => w.panels.map((p) => p.id)));
+    setPipes((prev) => {
+      const next = {};
+      Object.entries(prev).forEach(([termId, notesId]) => {
+        if (allIds.has(termId) && allIds.has(notesId)) next[termId] = notesId;
+      });
+      return next;
+    });
+  }, [workspaces]);
+
+  const sendToTerminal = useCallback((text, opts = {}) => {
+    if (!activeWs || !text) return { ok: false, reason: 'No active workspace' };
+    const terminals = activeWs.panels.filter((p) => p.type === 'terminal');
+    if (terminals.length === 0) {
+      return { ok: false, reason: 'No terminal in workspace' };
+    }
+    const focused = terminals.find((p) => p.id === activeWs.focusedId);
+    const target = focused || terminals[terminals.length - 1];
+    const leafId = target.focusedLeaf || (target.tree ? firstLeaf(target.tree) : target.id) || target.id;
+    const payload = opts.execute ? text + (text.endsWith('\n') ? '' : '\r') : text;
+    try {
+      window.boxterAPI?.terminal?.write(leafId, payload);
+    } catch { return { ok: false, reason: 'Terminal write failed' }; }
+    logActivity({
+      category: 'content',
+      title: `Sent ${text.split('\n').length} line(s) to ${target.name || 'Terminal'}`,
+      detail: activeWs.name,
+      workspaceId: activeWs.id,
+      panelId: target.id,
+    });
+    return { ok: true, terminalId: leafId, terminalName: target.name || 'Terminal' };
+  }, [activeWs]);
+
+  const getPipeForLeaf = useCallback((leafId) => {
+    const notesId = pipes[leafId];
+    if (!notesId) return null;
+    const notePanel = activeWs?.panels.find((p) => p.id === notesId);
+    return { notesId, label: notePanel ? (notePanel.name || 'Notes') : null };
+  }, [pipes, activeWs]);
 
   const renderPanel = (panel) => {
     switch (panel.type) {
-      case 'terminal': return <TerminalPanel id={panel.id} />;
+      case 'terminal': {
+        return (
+          <TerminalPanel
+            id={panel.id}
+            tree={panel.tree}
+            focusedLeaf={panel.focusedLeaf}
+            onTreeChange={(t) => setTerminalTree(panel.id, t)}
+            onFocusedLeafChange={(leafId) => setFocusedLeaf(panel.id, leafId)}
+            onClose={() => removePanel(panel.id)}
+            getPipeFor={getPipeForLeaf}
+          />
+        );
+      }
       case 'browser':  return <BrowserPanel id={panel.id} />;
-      case 'notes':    return <NotesPanel id={panel.id} />;
+      case 'notes':    return <NotesPanel id={panel.id} onSendToTerminal={sendToTerminal} />;
       case 'files':    return <FilesPanel id={panel.id} />;
       default: return <div>Unknown panel type</div>;
     }
@@ -945,6 +1113,11 @@ export default function App() {
                 onRename={renamePanel}
                 onDuplicate={duplicatePanel}
                 onTogglePin={togglePin}
+                onSendToTerminal={sendToTerminal}
+                onTerminalTree={setTerminalTree}
+                onFocusedLeaf={setFocusedLeaf}
+                onClosePanel={removePanel}
+                getPipeFor={getPipeForLeaf}
               />
             ) : (
               <ResponsiveGrid
