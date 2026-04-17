@@ -201,6 +201,30 @@ ipcMain.on('open:external', (event, url) => {
   shell.openExternal(url);
 });
 
+// System stats (for StatusBanner)
+ipcMain.handle('system:stats', () => {
+  const total = os.totalmem();
+  const free = os.freemem();
+  const used = total - free;
+  return {
+    mem: {
+      totalMB: Math.round(total / 1048576),
+      usedMB: Math.round(used / 1048576),
+      pct: Math.round((used / total) * 100),
+    },
+    cpu: {
+      count: os.cpus().length,
+      load1: os.loadavg()[0],
+    },
+    uptimeSec: Math.floor(os.uptime()),
+    platform: os.platform(),
+    arch: os.arch(),
+    hostname: os.hostname(),
+    terminals: terminals.size,
+    appVersion: app.getVersion(),
+  };
+});
+
 // --- File-drop panel storage ---------------------------------------------
 // Files are kept under userData/boxter-files/<panelId>/. All paths are
 // normalized + confined to that directory to avoid traversal.

@@ -27,6 +27,7 @@ export default function PanelWrapper({
   onDuplicate,
   onToggleMaximize,
   onTogglePin,
+  onHeaderMouseDown,
   children,
 }) {
   const [editing, setEditing] = useState(false);
@@ -72,6 +73,11 @@ export default function PanelWrapper({
     >
       <div
         className="panel-header"
+        onMouseDown={(e) => {
+          if (!onHeaderMouseDown) return;
+          if (e.target.closest('.no-drag, button, input, textarea')) return;
+          onHeaderMouseDown(e);
+        }}
         onDoubleClick={(e) => {
           // Ignore if double-click came from the title (which handles rename)
           if (e.target.closest('.panel-type, .panel-name-input, button')) return;

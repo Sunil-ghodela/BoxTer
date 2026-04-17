@@ -17,7 +17,8 @@ const SHORTCUTS = [
     { keys: ['Click'],            desc: 'Focus a panel' },
   ]},
   { group: 'Workspaces', items: [
-    { keys: ['Ctrl', 'Shift', 'N'], desc: 'New workspace' },
+    { keys: ['Ctrl', 'Shift', 'N'], desc: 'New empty workspace' },
+    { keys: ['Ctrl', 'Alt', 'N'],   desc: 'New workspace from template' },
     { keys: ['Ctrl', 'Tab'],        desc: 'Next workspace' },
     { keys: ['Ctrl', 'Shift', 'Tab'], desc: 'Previous workspace' },
     { keys: ['Ctrl', 'Alt', '1..9'], desc: 'Switch to nth workspace' },
@@ -28,6 +29,24 @@ const SHORTCUTS = [
   ]},
   { group: 'Sessions', items: [
     { keys: ['Ctrl', 'S'],        desc: 'Open session manager' },
+  ]},
+  { group: 'Appearance', items: [
+    { keys: ['Alt', 'T'],         desc: 'Cycle theme (Dark / Light / Cyberpunk / Solarized / Dracula)' },
+    { keys: ['Alt', 'B'],         desc: 'Toggle status banner' },
+    { keys: ['Alt', 'H'],         desc: 'Toggle activity timeline (bottom)' },
+  ]},
+  { group: 'Canvas view', items: [
+    { keys: ['Alt', 'V'],         desc: 'Toggle Grid / Canvas view' },
+    { keys: ['Click panel'],      desc: 'Focus panel (auto-zoom in if zoomed out)' },
+    { keys: ['Alt', 'Z'],         desc: 'Zoom to focused panel' },
+    { keys: ['Mouse wheel'],      desc: 'Zoom in / out (anchored to pointer)' },
+    { keys: ['Click-drag'],       desc: 'Pan on empty canvas area' },
+    { keys: ['Ctrl', '0'],        desc: 'Fit all panels to view' },
+    { keys: ['Ctrl', '1'],        desc: 'Reset to 100% zoom' },
+    { keys: ['+ / -'],            desc: 'Zoom in / out' },
+  ]},
+  { group: 'Search', items: [
+    { keys: ['Ctrl', 'P'],        desc: 'Global search (notes content, files, URLs, panels)' },
   ]},
   { group: 'Help', items: [
     { keys: ['Ctrl', 'K'],        desc: 'Command palette (search all actions)' },

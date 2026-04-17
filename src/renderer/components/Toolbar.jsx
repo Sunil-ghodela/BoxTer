@@ -7,7 +7,16 @@ const PANEL_TYPES = [
   { type: 'files',    label: 'Files',    icon: '+' },
 ];
 
-export default function Toolbar({ onAddPanel, onToggleSessions, onShowShortcuts }) {
+export default function Toolbar({
+  onAddPanel,
+  onToggleSessions,
+  onShowShortcuts,
+  onCycleTheme,
+  themeLabel,
+  themeIcon,
+  viewMode,
+  onToggleViewMode,
+}) {
   return (
     <div className="toolbar">
       <div className="toolbar-brand">
@@ -30,6 +39,22 @@ export default function Toolbar({ onAddPanel, onToggleSessions, onShowShortcuts 
       </div>
 
       <div className="toolbar-right">
+        {onToggleViewMode && (
+          <button
+            className={`toolbar-btn view-mode-btn${viewMode === 'canvas' ? ' view-mode-canvas' : ''}`}
+            onClick={onToggleViewMode}
+            title={viewMode === 'canvas' ? 'Switch to Grid view (Alt+V)' : 'Switch to Canvas view (Alt+V)'}
+          >
+            {viewMode === 'canvas' ? 'Canvas' : 'Grid'}
+          </button>
+        )}
+        <button
+          className="toolbar-btn theme-btn"
+          onClick={onCycleTheme}
+          title={`Theme: ${themeLabel} (Alt+T to cycle)`}
+        >
+          {themeIcon}
+        </button>
         <button
           className="toolbar-btn help-btn"
           onClick={onShowShortcuts}

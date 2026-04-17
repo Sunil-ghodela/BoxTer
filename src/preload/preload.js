@@ -43,6 +43,11 @@ contextBridge.exposeInMainWorld('boxterAPI', {
   // External
   openExternal: (url) => ipcRenderer.send('open:external', url),
 
+  // System
+  system: {
+    stats: () => ipcRenderer.invoke('system:stats'),
+  },
+
   // Auto-updater
   updater: {
     onAvailable: (cb) => {
