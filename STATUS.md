@@ -1,10 +1,10 @@
 # BoxTer — Project Status & Roadmap
 
-_Last updated: 2026-04-17_
+_Last updated: 2026-04-19_
 
 ## Current State
 
-- **Version:** v1.0.1 released
+- **Version:** v1.1.1 released (v1.1.0 was cut but superseded/deleted before publish)
 - **Branch:** `main` (clean, synced with origin)
 - **Stack:** Electron 33 + React 19 + Vite + react-grid-layout + xterm.js
 - **Panels:** Terminal, Browser, Notes, Files
