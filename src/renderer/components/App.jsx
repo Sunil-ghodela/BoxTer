@@ -741,6 +741,36 @@ export default function App() {
 
   useKeyboardShortcuts(shortcuts);
 
+  // Terminal → Notes pipe map, persisted in localStorage
+  const [pipes, setPipes] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('boxter-pipes') || '{}') || {}; }
+    catch { return {}; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('boxter-pipes', JSON.stringify(pipes)); } catch { /* ignore */ }
+  }, [pipes]);
+
+  const setTerminalPipe = useCallback((terminalId, notesId) => {
+    setPipes((prev) => {
+      const next = { ...prev };
+      if (notesId) next[terminalId] = notesId;
+      else delete next[terminalId];
+      return next;
+    });
+    if (!activeWs) return;
+    const term = activeWs.panels.find((p) => p.id === terminalId);
+    const note = notesId && activeWs.panels.find((p) => p.id === notesId);
+    logActivity({
+      category: 'content',
+      title: notesId
+        ? `Pipe: ${term?.name || 'Terminal'} → ${note?.name || 'Notes'}`
+        : `Pipe cleared on ${term?.name || 'Terminal'}`,
+      detail: activeWs.name,
+      workspaceId: activeWs.id,
+      panelId: terminalId,
+    });
+  }, [activeWs]);
+
   // Commands available in the palette (Ctrl+K).
   const commands = useMemo(() => {
     const focusedPanel = activeWs?.panels.find((p) => p.id === focusedId) || null;
@@ -894,36 +924,6 @@ export default function App() {
     toggleViewMode, showActivity, toggleActivity, addWorkspaceFromTemplate,
     pipes, setTerminalPipe,
   ]);
-
-  // Terminal → Notes pipe map, persisted in localStorage
-  const [pipes, setPipes] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('boxter-pipes') || '{}') || {}; }
-    catch { return {}; }
-  });
-  useEffect(() => {
-    try { localStorage.setItem('boxter-pipes', JSON.stringify(pipes)); } catch { /* ignore */ }
-  }, [pipes]);
-
-  const setTerminalPipe = useCallback((terminalId, notesId) => {
-    setPipes((prev) => {
-      const next = { ...prev };
-      if (notesId) next[terminalId] = notesId;
-      else delete next[terminalId];
-      return next;
-    });
-    if (!activeWs) return;
-    const term = activeWs.panels.find((p) => p.id === terminalId);
-    const note = notesId && activeWs.panels.find((p) => p.id === notesId);
-    logActivity({
-      category: 'content',
-      title: notesId
-        ? `Pipe: ${term?.name || 'Terminal'} → ${note?.name || 'Notes'}`
-        : `Pipe cleared on ${term?.name || 'Terminal'}`,
-      detail: activeWs.name,
-      workspaceId: activeWs.id,
-      panelId: terminalId,
-    });
-  }, [activeWs]);
 
   // Clean up dangling pipes when panels are removed
   useEffect(() => {
